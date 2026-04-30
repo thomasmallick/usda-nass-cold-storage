@@ -3,22 +3,22 @@
 Fetch USDA NASS cold storage data and update data/cold-storage-archive.json.
 
 Usage:
-  python scripts/fetch-usda.py                    # fetch latest available month
-  python scripts/fetch-usda.py --backfill 60      # fetch last 60 months
-  python scripts/fetch-usda.py --month 2025-06    # fetch a specific month
-  python scripts/fetch-usda.py --explore butter   # print raw API response (no write)
+  USDA_API_KEY=xxx python scripts/fetch-usda.py              # fetch latest month
+  USDA_API_KEY=xxx python scripts/fetch-usda.py --backfill 60
+  USDA_API_KEY=xxx python scripts/fetch-usda.py --month 2025-06
+  USDA_API_KEY=xxx python scripts/fetch-usda.py --explore BUTTER
 
-Requires: USDA_API_KEY environment variable
-  Register free at: https://quickstats.nass.usda.gov/api
-
-How USDA Quick Stats works for cold storage:
-  - source_desc = SURVEY
-  - statisticcat_desc = COLD STORAGE
-  - unit_desc = 1000 LB
-  - freq_desc = MONTHLY
-  - Each commodity / item combo maps to a unique short_desc in the API.
-  - The release_date field shows when USDA published that month's data.
-  - Use --explore to inspect what fields the API returns before editing COMMODITY_MAP.
+Confirmed USDA Quick Stats cold storage schema (verified via get_param_values):
+  - statisticcat_desc = STOCKS
+  - freq_desc = POINT IN TIME
+  - reference_period_desc = END OF JAN (not period_desc=JAN)
+  - agg_level_desc = NATIONAL
+  - unit_desc = LB (raw pounds — NOT 1000 LB)
+  - Archive stores values in 1000 lb — we divide API values by 1000
+  - util varies: COLD STORAGE (butter), COLD STORAGE, CHILLED (cheese),
+                 COLD STORAGE, FROZEN (meat/produce)
+  - short_desc uniquely identifies each row; query by short_desc + year +
+    reference_period_desc only (adding redundant fields causes 400 errors)
 """
 
 import os
@@ -35,89 +35,87 @@ except ImportError:
     print("ERROR: 'requests' not installed. Run: pip install requests", file=sys.stderr)
     sys.exit(1)
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).parent.parent
 ARCHIVE_PATH = REPO_ROOT / "data" / "cold-storage-archive.json"
 API_BASE = "https://quickstats.nass.usda.gov/api/api_GET/"
+PARAM_BASE = "https://quickstats.nass.usda.gov/api/get_param_values/"
+
+# Month number → reference_period_desc value used by USDA cold storage data
+MONTH_PERIODS = {
+    1: "END OF JAN", 2: "END OF FEB", 3: "END OF MAR",
+    4: "END OF APR", 5: "END OF MAY", 6: "END OF JUN",
+    7: "END OF JUL", 8: "END OF AUG", 9: "END OF SEP",
+    10: "END OF OCT", 11: "END OF NOV", 12: "END OF DEC",
+}
 
 # ---------------------------------------------------------------------------
-# Commodity map: our internal key → USDA Quick Stats query parameters.
+# Commodity map
 #
-# The most reliable filter is `short_desc`, which is the full item string
-# exactly as USDA uses it.  Use --explore <key> to print what USDA returns
-# and verify/correct these strings.
+# "short_desc" entries → single API query; one record expected.
+# "aggregate_of" entries → fetch each component and sum them.
 #
-# Format of short_desc: "{ITEM} - COLD STORAGE, MEASURED IN 1000 LB"
+# All short_desc strings were confirmed via direct API calls (Jan 2026).
+# Values arrive in LB; the archive stores 1000-lb units (divide by 1000).
 # ---------------------------------------------------------------------------
 COMMODITY_MAP: dict[str, dict] = {
     "butter": {
-        "commodity_desc": "BUTTER",
-        "short_desc": "BUTTER - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "BUTTER, COLD STORAGE - STOCKS, MEASURED IN LB",
     },
     "american_cheese": {
-        "commodity_desc": "CHEESE",
-        "short_desc": "CHEESE, AMERICAN TYPE - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "CHEESE, NATURAL, AMERICAN, COLD STORAGE, CHILLED - STOCKS, MEASURED IN LB",
     },
     "swiss_cheese": {
-        "commodity_desc": "CHEESE",
-        "short_desc": "CHEESE, SWISS TYPE - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "CHEESE, NATURAL, SWISS, COLD STORAGE, CHILLED - STOCKS, MEASURED IN LB",
     },
     "other_natural_cheese": {
-        "commodity_desc": "CHEESE",
-        "short_desc": "CHEESE, OTHER NATURAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "CHEESE, NATURAL, (EXCL AMERICAN & SWISS), COLD STORAGE, CHILLED - STOCKS, MEASURED IN LB",
     },
     "total_natural_cheese": {
-        "commodity_desc": "CHEESE",
-        "short_desc": "CHEESE, NATURAL TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "CHEESE, NATURAL, COLD STORAGE, CHILLED - STOCKS, MEASURED IN LB",
     },
     "total_chicken": {
-        "commodity_desc": "CHICKENS",
-        "short_desc": "CHICKENS, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "CHICKENS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "total_turkey": {
-        "commodity_desc": "TURKEYS",
-        "short_desc": "TURKEYS, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "TURKEYS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
+    # total_frozen_poultry: no USDA total exists; sum sub-commodities.
+    # Ducks are a small contributor but USDA publishes them separately.
     "total_frozen_poultry": {
-        "commodity_desc": "POULTRY",
-        "short_desc": "POULTRY, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "aggregate_of": [
+            "CHICKENS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+            "TURKEYS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+            "DUCKS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+        ],
     },
     "total_frozen_fruit": {
-        "commodity_desc": "FRUIT & TREE NUTS",
-        "short_desc": "FRUIT, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "FRUIT TOTALS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "total_frozen_vegetables": {
-        "commodity_desc": "VEGETABLES",
-        "short_desc": "VEGETABLES, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "VEGETABLE TOTALS, (EXCL POTATOES), COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "total_frozen_potatoes": {
-        "commodity_desc": "POTATOES",
-        "short_desc": "POTATOES, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "POTATOES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "total_beef": {
-        "commodity_desc": "CATTLE",
-        "short_desc": "BEEF, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "BEEF, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "pork_bellies": {
-        "commodity_desc": "HOGS",
-        "short_desc": "PORK BELLIES, FROZEN - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "PORK, BELLIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
     "total_pork": {
-        "commodity_desc": "HOGS",
-        "short_desc": "PORK, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "short_desc": "PORK, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
+    # total_frozen_red_meat: no USDA total; sum sub-commodities.
     "total_frozen_red_meat": {
-        "commodity_desc": "RED MEAT",
-        "short_desc": "RED MEAT, FROZEN, TOTAL - COLD STORAGE, MEASURED IN 1000 LB",
+        "aggregate_of": [
+            "BEEF, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+            "PORK, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+            "VEAL, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+            "LAMB & MUTTON, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+        ],
     },
 }
-
-PERIOD_NAMES = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
-]
 
 
 # ---------------------------------------------------------------------------
@@ -132,112 +130,150 @@ def get_api_key() -> str:
     return key
 
 
-def api_get(params: dict, retries: int = 3) -> dict:
-    """Hit the Quick Stats API with retry + backoff. 4xx errors are not retried."""
+def api_get(params: dict, retries: int = 4) -> dict:
+    """Hit the Quick Stats API with retry + backoff.
+    4xx = bad query, raise immediately. 5xx = server/rate-limit, retry with backoff."""
     for attempt in range(retries):
         try:
-            resp = requests.get(API_BASE, params=params, timeout=20)
-            # 4xx = bad query; retrying won't help — raise immediately.
+            resp = requests.get(API_BASE, params=params, timeout=30)
             if 400 <= resp.status_code < 500:
-                resp.raise_for_status()
-            resp.raise_for_status()
+                resp.raise_for_status()  # bad query — don't retry
+            if resp.status_code >= 500:
+                raise requests.exceptions.HTTPError(
+                    f"HTTP {resp.status_code}", response=resp
+                )
             return resp.json()
-        except requests.exceptions.HTTPError:
-            raise
+        except requests.exceptions.HTTPError as exc:
+            code = exc.response.status_code if exc.response is not None else 0
+            if code >= 500 and attempt < retries - 1:
+                wait = 2 ** (attempt + 1)  # 2, 4, 8 s
+                print(f"  [{code}] Retry {attempt + 1}/{retries - 1} after {wait}s")
+                time.sleep(wait)
+            else:
+                raise
         except requests.RequestException as exc:
             if attempt < retries - 1:
                 wait = 2 ** attempt
-                print(f"  Retry {attempt + 1}/{retries} after {wait}s ({exc})")
+                print(f"  Retry {attempt + 1}/{retries - 1} after {wait}s ({exc})")
                 time.sleep(wait)
             else:
                 raise
 
 
-def fetch_commodity_month(api_key: str, commodity_key: str, year: int, month: int) -> int | None:
-    """Return the cold storage value (in 1000 lb) for one commodity and one month.
-
-    Uses only short_desc + temporal filters. The short_desc already encodes
-    commodity, statisticcat, and unit — adding those again causes 400 errors.
-    Returns None on any API error so the caller can skip and continue.
-    """
-    cfg = COMMODITY_MAP[commodity_key]
-    period = PERIOD_NAMES[month - 1]
+def fetch_short_desc(api_key: str, short_desc: str, year: int, month: int) -> int | None:
+    """Fetch a single short_desc value for a given year/month. Returns lb value or None."""
+    ref_period = MONTH_PERIODS[month]
     params = {
         "key": api_key,
         "format": "JSON",
-        "source_desc": "SURVEY",
-        "short_desc": cfg["short_desc"],
+        "short_desc": short_desc,
         "year": str(year),
-        "period_desc": period,
+        "reference_period_desc": ref_period,
+        "agg_level_desc": "NATIONAL",
     }
     try:
         data = api_get(params)
     except requests.exceptions.HTTPError as exc:
-        print(f"\n    WARN {commodity_key} {year}-{month:02d}: {exc.response.status_code} — skipping")
-        print(f"    short_desc used: {cfg['short_desc']}")
-        print(f"    Run --explore {commodity_key} to inspect available items.")
+        print(f"\n    WARN [{short_desc[:50]}] {year}-{month:02d}: HTTP {exc.response.status_code}")
         return None
     except requests.RequestException as exc:
-        print(f"\n    WARN {commodity_key} {year}-{month:02d}: network error ({exc}) — skipping")
+        print(f"\n    WARN [{short_desc[:50]}] {year}-{month:02d}: network error ({exc})")
         return None
 
     records = data.get("data", [])
     if not records:
         return None
-    raw = records[0].get("Value", "")
+
+    # If multiple records returned (unexpected), take "ALL CLASSES" or first.
+    if len(records) > 1:
+        all_class = [r for r in records if r.get("class_desc") == "ALL CLASSES"]
+        record = all_class[0] if all_class else records[0]
+        print(f"\n    NOTE [{short_desc[:50]}]: {len(records)} records, used class={record.get('class_desc')!r}")
+    else:
+        record = records[0]
+
+    raw = record.get("Value", "")
     try:
         return int(raw.replace(",", ""))
     except ValueError:
         return None
 
 
-def fetch_month(api_key: str, year: int, month: int, verbose: bool = False) -> dict[str, int]:
-    """Fetch all commodities for a given observation month. Returns {key: value_in_1000lb}."""
-    result: dict[str, int] = {}
-    observation_date = datetime.date(year, month, 1)
-    # Last day of the observation month
-    if month == 12:
-        last_day = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
-    else:
-        last_day = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
+def fetch_commodity_month(api_key: str, key: str, year: int, month: int) -> int | None:
+    """Return cold storage value in 1000 lb for one archive key and one month."""
+    cfg = COMMODITY_MAP[key]
 
-    print(f"  Fetching {observation_date.strftime('%B %Y')}...", end=" ", flush=True)
+    if "short_desc" in cfg:
+        lb = fetch_short_desc(api_key, cfg["short_desc"], year, month)
+        if lb is None:
+            return None
+        return lb // 1000
+
+    if "aggregate_of" in cfg:
+        total = 0
+        found = 0
+        for short_desc in cfg["aggregate_of"]:
+            lb = fetch_short_desc(api_key, short_desc, year, month)
+            if lb is not None:
+                total += lb
+                found += 1
+            time.sleep(0.5)
+        if found == 0:
+            return None
+        if found < len(cfg["aggregate_of"]):
+            print(f"\n    NOTE [{key}]: only {found}/{len(cfg['aggregate_of'])} components found")
+        return total // 1000
+
+    raise ValueError(f"COMMODITY_MAP[{key!r}] must have 'short_desc' or 'aggregate_of'")
+
+
+def fetch_month(api_key: str, year: int, month: int) -> tuple[dict[str, int], str]:
+    """Fetch all commodities for one month. Returns ({key: value_1000lb}, observation_date)."""
+    result: dict[str, int] = {}
+    last_day = last_day_of_month(year, month)
+
+    print(f"  Fetching {MONTH_PERIODS[month].replace('END OF ', '')} {year}...", end=" ", flush=True)
     hits = 0
     for key in COMMODITY_MAP:
         val = fetch_commodity_month(api_key, key, year, month)
         if val is not None:
             result[key] = val
             hits += 1
-        time.sleep(0.15)  # be polite to the API
+        time.sleep(0.5)  # stay under USDA rate limit
 
-    print(f"{hits}/{len(COMMODITY_MAP)} commodities found")
-    return result, str(last_day)
+    print(f"{hits}/{len(COMMODITY_MAP)} found")
+    return result, last_day
 
 
-def explore_commodity(api_key: str, commodity_key: str) -> None:
-    """Print the raw API response for a commodity to help debug COMMODITY_MAP."""
-    cfg = COMMODITY_MAP[commodity_key]
+def explore_commodity(api_key: str, commodity_desc: str) -> None:
+    """Print all STOCKS records for a commodity to help identify correct short_desc."""
     params = {
         "key": api_key,
         "format": "JSON",
-        "source_desc": "SURVEY",
-        "statisticcat_desc": "COLD STORAGE",
-        "commodity_desc": cfg["commodity_desc"],
-        "unit_desc": "1000 LB",
-        "freq_desc": "MONTHLY",
+        "commodity_desc": commodity_desc.upper(),
+        "statisticcat_desc": "STOCKS",
+        "agg_level_desc": "NATIONAL",
         "year": "2026",
-        "period_desc": "JAN",
+        "reference_period_desc": "END OF JAN",
     }
-    data = api_get(params)
+    try:
+        data = api_get(params)
+    except requests.exceptions.HTTPError as exc:
+        print(f"HTTP {exc.response.status_code}: {exc.response.text[:300]}")
+        return
+
     records = data.get("data", [])
     if not records:
-        print(f"No records found for {commodity_key}")
-    else:
-        print(f"\n{len(records)} records for '{commodity_key}' (Jan 2026):\n")
-        for r in records[:10]:
-            print(f"  short_desc: {r.get('short_desc')}")
-            print(f"  value:      {r.get('Value')}")
-            print()
+        print(f"No STOCKS records found for commodity_desc={commodity_desc!r} (Jan 2026 national)")
+        return
+
+    print(f"\n{len(records)} records for {commodity_desc!r} — Jan 2026:\n")
+    for r in records[:20]:
+        print(f"  short_desc:        {r.get('short_desc')!r}")
+        print(f"  class_desc:        {r.get('class_desc')!r}")
+        print(f"  util_practice:     {r.get('util_practice_desc')!r}")
+        print(f"  value (LB):        {r.get('Value')}")
+        print()
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +288,6 @@ def load_archive() -> dict:
             "updated": datetime.date.today().isoformat(),
             "source": "USDA NASS Quick Stats API",
             "units": "1000 lb",
-            "note": "Commodity values in 1000 lb. Dashboard multiplies by 1000 for display.",
         },
         "snapshots": [],
     }
@@ -267,23 +302,18 @@ def save_archive(archive: dict) -> None:
     print(f"Saved {ARCHIVE_PATH} ({size_kb:.1f} KB, {len(archive['snapshots'])} snapshots)")
 
 
-def find_snapshot(archive: dict, observation_date: str) -> int | None:
-    """Return index of existing snapshot or None."""
+def find_snapshot_idx(archive: dict, observation_date: str) -> int | None:
     for i, s in enumerate(archive["snapshots"]):
         if s["observationDate"] == observation_date:
             return i
     return None
 
 
-def upsert_snapshot(archive: dict, observation_date: str, commodities: dict[str, int]) -> bool:
-    """Add or update a snapshot. Returns True if archive changed."""
+def upsert_snapshot(archive: dict, observation_date: str, commodities: dict) -> bool:
     if not commodities:
         return False
-    snapshot = {
-        "observationDate": observation_date,
-        "commodities": commodities,
-    }
-    idx = find_snapshot(archive, observation_date)
+    snapshot = {"observationDate": observation_date, "commodities": commodities}
+    idx = find_snapshot_idx(archive, observation_date)
     if idx is not None:
         if archive["snapshots"][idx]["commodities"] == commodities:
             return False
@@ -295,10 +325,17 @@ def upsert_snapshot(archive: dict, observation_date: str, commodities: dict[str,
 
 
 # ---------------------------------------------------------------------------
-# Month arithmetic
+# Date helpers
 # ---------------------------------------------------------------------------
+def last_day_of_month(year: int, month: int) -> str:
+    if month == 12:
+        d = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        d = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
+    return d.isoformat()
+
+
 def months_back(from_date: datetime.date, n: int) -> list[tuple[int, int]]:
-    """Return list of (year, month) tuples going n months back from from_date."""
     result = []
     year, month = from_date.year, from_date.month
     for _ in range(n):
@@ -310,14 +347,6 @@ def months_back(from_date: datetime.date, n: int) -> list[tuple[int, int]]:
     return result
 
 
-def last_day_of_month(year: int, month: int) -> str:
-    if month == 12:
-        d = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
-    else:
-        d = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
-    return d.isoformat()
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -325,15 +354,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch USDA cold storage data.")
     parser.add_argument("--backfill", type=int, metavar="N", help="Fetch last N months")
     parser.add_argument("--month", metavar="YYYY-MM", help="Fetch a specific month")
-    parser.add_argument("--explore", metavar="COMMODITY_KEY", help="Print raw API response for a key")
+    parser.add_argument(
+        "--explore", metavar="COMMODITY_DESC",
+        help="Print all STOCKS records for a commodity name (e.g. BUTTER, CHICKENS)",
+    )
     args = parser.parse_args()
 
     api_key = get_api_key()
 
     if args.explore:
-        if args.explore not in COMMODITY_MAP:
-            print(f"Unknown key: {args.explore}. Valid keys: {', '.join(COMMODITY_MAP)}")
-            sys.exit(1)
         explore_commodity(api_key, args.explore)
         return
 
@@ -346,28 +375,34 @@ def main() -> None:
         commodities, obs_date = fetch_month(api_key, year, month)
         if upsert_snapshot(archive, obs_date, commodities):
             changed = True
+
     elif args.backfill:
         today = datetime.date.today()
-        # USDA data lags ~3-4 weeks; start from 2 months ago to be safe.
+        # USDA data for month M releases ~22nd-24th of M+1; start 2 months back.
         start = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=60)
         ym_list = months_back(start, args.backfill)
-        print(f"Backfilling {len(ym_list)} months from {ym_list[-1][0]}-{ym_list[-1][1]:02d} to {ym_list[0][0]}-{ym_list[0][1]:02d}...")
+        print(
+            f"Backfilling {len(ym_list)} months "
+            f"({ym_list[-1][0]}-{ym_list[-1][1]:02d} → {ym_list[0][0]}-{ym_list[0][1]:02d})..."
+        )
         for year, month in reversed(ym_list):
             commodities, obs_date = fetch_month(api_key, year, month)
             if upsert_snapshot(archive, obs_date, commodities):
                 changed = True
-            time.sleep(0.5)
+                save_archive(archive)  # save incrementally so a kill doesn't lose everything
+            time.sleep(3.0)  # pause between months to avoid rate limiting
+
     else:
-        # Default: fetch the month that USDA most recently released.
+        # Default: the most recently published month (USDA releases ~22nd-24th of M+1).
         today = datetime.date.today()
-        # Data for month M is released around the 22nd-24th of M+1.
         if today.day >= 24:
-            target = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
+            prev = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
+            target_year, target_month = prev.year, prev.month
         else:
-            two_months_ago = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=32)
-            target = datetime.date(two_months_ago.year, two_months_ago.month, 1)
-        print(f"Fetching latest available month: {target.strftime('%B %Y')}...")
-        commodities, obs_date = fetch_month(api_key, target.year, target.month)
+            two_back = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=32)
+            target_year, target_month = two_back.year, two_back.month
+        print(f"Fetching latest available: {MONTH_PERIODS[target_month]} {target_year}...")
+        commodities, obs_date = fetch_month(api_key, target_year, target_month)
         if upsert_snapshot(archive, obs_date, commodities):
             changed = True
 
