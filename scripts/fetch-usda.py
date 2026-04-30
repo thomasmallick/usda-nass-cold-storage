@@ -133,12 +133,17 @@ def get_api_key() -> str:
 
 
 def api_get(params: dict, retries: int = 3) -> dict:
-    """Hit the Quick Stats API with retry + backoff."""
+    """Hit the Quick Stats API with retry + backoff. 4xx errors are not retried."""
     for attempt in range(retries):
         try:
             resp = requests.get(API_BASE, params=params, timeout=20)
+            # 4xx = bad query; retrying won't help — raise immediately.
+            if 400 <= resp.status_code < 500:
+                resp.raise_for_status()
             resp.raise_for_status()
             return resp.json()
+        except requests.exceptions.HTTPError:
+            raise
         except requests.RequestException as exc:
             if attempt < retries - 1:
                 wait = 2 ** attempt
@@ -149,25 +154,36 @@ def api_get(params: dict, retries: int = 3) -> dict:
 
 
 def fetch_commodity_month(api_key: str, commodity_key: str, year: int, month: int) -> int | None:
-    """Return the cold storage value (in 1000 lb) for one commodity and one month."""
+    """Return the cold storage value (in 1000 lb) for one commodity and one month.
+
+    Uses only short_desc + temporal filters. The short_desc already encodes
+    commodity, statisticcat, and unit — adding those again causes 400 errors.
+    Returns None on any API error so the caller can skip and continue.
+    """
     cfg = COMMODITY_MAP[commodity_key]
     period = PERIOD_NAMES[month - 1]
     params = {
         "key": api_key,
         "format": "JSON",
         "source_desc": "SURVEY",
-        "statisticcat_desc": "COLD STORAGE",
-        "unit_desc": "1000 LB",
-        "freq_desc": "MONTHLY",
+        "short_desc": cfg["short_desc"],
         "year": str(year),
         "period_desc": period,
-        "short_desc": cfg["short_desc"],
     }
-    data = api_get(params)
+    try:
+        data = api_get(params)
+    except requests.exceptions.HTTPError as exc:
+        print(f"\n    WARN {commodity_key} {year}-{month:02d}: {exc.response.status_code} — skipping")
+        print(f"    short_desc used: {cfg['short_desc']}")
+        print(f"    Run --explore {commodity_key} to inspect available items.")
+        return None
+    except requests.RequestException as exc:
+        print(f"\n    WARN {commodity_key} {year}-{month:02d}: network error ({exc}) — skipping")
+        return None
+
     records = data.get("data", [])
     if not records:
         return None
-    # Take the first (usually only) matching record.
     raw = records[0].get("Value", "")
     try:
         return int(raw.replace(",", ""))
