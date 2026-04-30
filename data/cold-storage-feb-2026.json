@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "title": "USDA Cold Storage Snapshot",
+    "releaseDate": "February 24, 2026",
+    "observationDate": "January 31, 2026",
+    "reportUrl": "https://www.nass.usda.gov/Publications/Todays_Reports/reports/cost0226.pdf",
+    "source": "USDA NASS Cold Storage report, February 2026 release",
+    "notes": [
+      "Values are transcribed from the official USDA NASS Cold Storage report released February 24, 2026.",
+      "Units are in 1,000 pounds in the source report; the dashboard converts them to pounds for display.",
+      "Each commodity includes year-ago, previous-month, and latest snapshot values from the report tables."
+    ]
+  },
+  "commodities": {
+    "butter": {
+      "label": "Butter",
+      "group": "dairy",
+      "values": {
+        "yearAgo": 261041,
+        "previousMonth": 187659,
+        "latest": 215440
+      }
+    },
+    "american_cheese": {
+      "label": "American cheese",
+      "group": "dairy",
+      "values": {
+        "yearAgo": 792686,
+        "previousMonth": 793795,
+        "latest": 792326
+      }
+    },
+    "swiss_cheese": {
+      "label": "Swiss cheese",
+      "group": "dairy",
+      "values": {
+        "yearAgo": 22981,
+        "previousMonth": 22640,
+        "latest": 23104
+      }
+    },
+    "other_natural_cheese": {
+      "label": "Other natural cheese",
+      "group": "dairy",
+      "values": {
+        "yearAgo": 562347,
+        "previousMonth": 561402,
+        "latest": 564765
+      }
+    },
+    "total_natural_cheese": {
+      "label": "Total natural cheese",
+      "group": "dairy",
+      "values": {
+        "yearAgo": 1378014,
+        "previousMonth": 1377837,
+        "latest": 1380195
+      }
+    },
+    "total_chicken": {
+      "label": "Total chicken",
+      "group": "protein",
+      "values": {
+        "yearAgo": 803966,
+        "previousMonth": 825348,
+        "latest": 794706
+      }
+    },
+    "total_turkey": {
+      "label": "Total turkey",
+      "group": "protein",
+      "values": {
+        "yearAgo": 259996,
+        "previousMonth": 174937,
+        "latest": 238077
+      }
+    },
+    "total_frozen_poultry": {
+      "label": "Total frozen poultry",
+      "group": "protein",
+      "values": {
+        "yearAgo": 1065198,
+        "previousMonth": 1002154,
+        "latest": 1034473
+      }
+    },
+    "total_frozen_fruit": {
+      "label": "Total frozen fruit",
+      "group": "produce",
+      "values": {
+        "yearAgo": 634984,
+        "previousMonth": 652163,
+        "latest": 649653
+      }
+    },
+    "total_frozen_vegetables": {
+      "label": "Total frozen vegetables",
+      "group": "produce",
+      "values": {
+        "yearAgo": 2086781,
+        "previousMonth": 2032944,
+        "latest": 1861220
+      }
+    },
+    "total_frozen_potatoes": {
+      "label": "Total frozen potatoes",
+      "group": "produce",
+      "values": {
+        "yearAgo": 1192929,
+        "previousMonth": 1128705,
+        "latest": 1213663
+      }
+    },
+    "total_beef": {
+      "label": "Total beef",
+      "group": "protein",
+      "values": {
+        "yearAgo": 455092,
+        "previousMonth": 434602,
+        "latest": 434895
+      }
+    },
+    "pork_bellies": {
+      "label": "Pork bellies",
+      "group": "protein",
+      "values": {
+        "yearAgo": 41700,
+        "previousMonth": 36964,
+        "latest": 43052
+      }
+    },
+    "total_pork": {
+      "label": "Total pork",
+      "group": "protein",
+      "values": {
+        "yearAgo": 407251,
+        "previousMonth": 386982,
+        "latest": 410404
+      }
+    },
+    "total_frozen_red_meat": {
+      "label": "Total frozen red meat",
+      "group": "protein",
+      "values": {
+        "yearAgo": 881285,
+        "previousMonth": 839189,
+        "latest": 862840
+      }
+    }
+  }
+}
