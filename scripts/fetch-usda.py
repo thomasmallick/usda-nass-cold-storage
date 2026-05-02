@@ -115,6 +115,73 @@ COMMODITY_MAP: dict[str, dict] = {
             "LAMB & MUTTON, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
         ],
     },
+
+    # -------------------------------------------------------------------------
+    # Deep-cut commodities — granular breakdowns shown in the Deep Cuts view.
+    # All short_desc values confirmed via --explore (Jan 2026).
+    # -------------------------------------------------------------------------
+
+    # Pork cuts
+    "pork_hams": {
+        "short_desc": "PORK, HAMS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "pork_ribs": {
+        "short_desc": "PORK, RIBS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "pork_loins": {
+        "short_desc": "PORK, LOINS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "pork_butts": {
+        "short_desc": "PORK, BUTTS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "pork_trimmings": {
+        "short_desc": "PORK, TRIMMINGS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+
+    # Beef cuts
+    "beef_boneless": {
+        "short_desc": "BEEF, BONELESS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "beef_bone_in": {
+        "short_desc": "BEEF, BONE-IN, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+
+    # Frozen fruits
+    "strawberries": {
+        "short_desc": "STRAWBERRIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "blueberries": {
+        "short_desc": "BLUEBERRIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "raspberries": {
+        "short_desc": "RASPBERRIES, RED, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "cherries_tart": {
+        "short_desc": "CHERRIES, TART, COLD STORAGE, RTP, FROZEN - STOCKS, MEASURED IN LB",
+    },
+
+    # Frozen vegetables
+    "sweet_corn_cut": {
+        "short_desc": "SWEET CORN, CUT, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "sweet_corn_cob": {
+        "short_desc": "SWEET CORN, COB, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "beans_green": {
+        "short_desc": "BEANS, GREEN, REGULAR CUT, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "carrots": {
+        "short_desc": "CARROTS, (EXCL DICED), COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "peas_green": {
+        "short_desc": "PEAS, GREEN, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "spinach": {
+        "short_desc": "SPINACH, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "broccoli": {
+        "short_desc": "BROCCOLI, CHOPPED & CUT, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
 }
 
 

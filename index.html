@@ -27,174 +27,233 @@
         </div>
       </header>
 
-      <section class="filter-rail" aria-label="Category filters">
-        <button class="filter-pill is-active" data-filter="all" type="button">All storage</button>
-        <button class="filter-pill" data-filter="dairy" type="button">Dairy</button>
-        <button class="filter-pill" data-filter="produce" type="button">Produce</button>
-        <button class="filter-pill" data-filter="protein" type="button">Meat + poultry</button>
-      </section>
+      <!-- ═══════════════════════════════════════════
+           TAB NAVIGATION
+      ════════════════════════════════════════════ -->
+      <nav class="tab-bar" aria-label="Dashboard views">
+        <button class="tab-pill tab-pill--active" data-tab="overview" type="button">Overview</button>
+        <button class="tab-pill" data-tab="through-time" type="button">Through Time</button>
+        <button class="tab-pill" data-tab="deep-cuts" type="button">Deep Cuts</button>
+      </nav>
 
-      <main class="editorial-dashboard-grid">
+      <!-- ═══════════════════════════════════════════
+           VIEW: OVERVIEW
+      ════════════════════════════════════════════ -->
+      <div class="view-section" id="view-overview">
 
-        <!-- ═══════════════════════════════════════════
-             ROW 1 — Poster metric + 2 saturated tiles
-        ════════════════════════════════════════════ -->
+        <section class="filter-rail" aria-label="Category filters">
+          <button class="filter-pill is-active" data-filter="all" type="button">All storage</button>
+          <button class="filter-pill" data-filter="dairy" type="button">Dairy</button>
+          <button class="filter-pill" data-filter="produce" type="button">Produce</button>
+          <button class="filter-pill" data-filter="protein" type="button">Meat + poultry</button>
+        </section>
 
-        <section class="editorial-panel editorial-panel--paper hero-panel" data-span="hero">
-          <div class="panel-top">
-            <p class="eyebrow">Total US cold storage</p>
-            <p class="mini-note" id="hero-observation-date">Loading…</p>
-          </div>
-          <div class="hero-copy">
-            <div class="hero-number-row">
-              <span class="hero-number" id="hero-value">—</span>
-              <span class="hero-unit">lb</span>
+        <main class="editorial-dashboard-grid">
+
+          <!-- ROW 1 — Poster metric + 2 saturated tiles -->
+
+          <section class="editorial-panel editorial-panel--paper hero-panel" data-span="hero">
+            <div class="panel-top">
+              <p class="eyebrow">Total US cold storage</p>
+              <p class="mini-note" id="hero-observation-date">Loading…</p>
             </div>
-            <p class="hero-subtitle">
-              Every frozen pound the US warehouses right now — butter, beef, broccoli, and everything in between.
+            <div class="hero-copy">
+              <div class="hero-number-row">
+                <span class="hero-number" id="hero-value">—</span>
+                <span class="hero-unit">lb</span>
+              </div>
+              <p class="hero-subtitle">
+                Every frozen pound the US warehouses right now — butter, beef, broccoli, and everything in between.
+              </p>
+            </div>
+            <div class="hero-foot">
+              <div>
+                <p class="mini-label">Month over month</p>
+                <p class="delta" id="hero-mom">—</p>
+              </div>
+              <div>
+                <p class="mini-label">Year over year</p>
+                <p class="delta" id="hero-yoy">—</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="editorial-panel editorial-panel--sun stat-panel" data-span="stat-1">
+            <div>
+              <p class="eyebrow">Fast mover</p>
+              <h2 class="panel-title">Butter snapped back.</h2>
+            </div>
+            <div class="stat-block">
+              <p class="stat-number" id="butter-value">—</p>
+              <p class="stat-unit">lb in storage</p>
+            </div>
+            <div class="stat-deltas">
+              <div>
+                <p class="mini-label">MoM</p>
+                <span class="delta" id="butter-mom">—</span>
+              </div>
+              <div>
+                <p class="mini-label">YoY</p>
+                <span class="delta" id="butter-yoy">—</span>
+              </div>
+            </div>
+            <span class="insight-badge" id="insight-butter"></span>
+          </section>
+
+          <section class="editorial-panel editorial-panel--coral stat-panel" data-span="stat-2">
+            <div>
+              <p class="eyebrow">Volume leader</p>
+              <h2 class="panel-title">Poultry holds the most ground.</h2>
+            </div>
+            <div class="stat-block">
+              <p class="stat-number" id="poultry-value">—</p>
+              <p class="stat-unit">lb frozen poultry</p>
+            </div>
+            <div class="stat-deltas">
+              <div>
+                <p class="mini-label">MoM</p>
+                <span class="delta" id="poultry-mom">—</span>
+              </div>
+            </div>
+            <span class="insight-badge" id="insight-poultry"></span>
+          </section>
+
+          <!-- ROW 2 — Narrative slab + Chart strip -->
+
+          <section class="editorial-panel editorial-panel--paper narrative-panel" data-span="narrative">
+            <div>
+              <p class="eyebrow">In plain terms</p>
+              <h2 class="panel-title">A number that earns its size.</h2>
+            </div>
+            <p class="body-copy narrative-copy" id="narrative-copy">Loading…</p>
+            <div class="quiet-metrics">
+              <div>
+                <p class="mini-label">Latest release</p>
+                <p id="release-date">—</p>
+              </div>
+              <div>
+                <p class="mini-label">Next release est.</p>
+                <p id="next-release">—</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="editorial-panel editorial-panel--cobalt chart-panel" data-span="chart">
+            <div class="panel-top">
+              <div>
+                <p class="eyebrow">5-year trend</p>
+                <h2 class="panel-title panel-title--light" id="trend-label">Total cold storage trend</h2>
+              </div>
+              <p class="mini-note mini-note--light" id="trend-months"></p>
+            </div>
+            <div class="chart-strip-wrap">
+              <canvas id="trend-canvas" class="trend-canvas" aria-label="5-year trend sparkline"></canvas>
+            </div>
+          </section>
+
+          <!-- ROW 3 — Cave art + Comparison + Source -->
+
+          <section class="editorial-panel editorial-panel--kelp cave-panel" data-span="cave">
+            <div class="panel-top">
+              <p class="eyebrow">Cheese cave</p>
+              <p class="mini-note mini-note--light">Scaled from latest mix</p>
+            </div>
+            <div class="cave-stack" id="cave-stack" aria-hidden="true"></div>
+            <p class="panel-footnote-text">
+              Width reflects relative storage volume — American, Swiss, other natural, and butter as the bright outer puck.
             </p>
-          </div>
-          <div class="hero-foot">
-            <div>
-              <p class="mini-label">Month over month</p>
-              <p class="delta" id="hero-mom">—</p>
+          </section>
+
+          <section class="editorial-panel editorial-panel--paper compare-panel" data-span="compare">
+            <div class="panel-top">
+              <div>
+                <p class="eyebrow">Year ago · last month · latest</p>
+                <h2 class="panel-title" id="compare-title">Storage mix</h2>
+              </div>
             </div>
+            <div class="compare-grid" id="compare-grid"></div>
+          </section>
+
+          <section class="editorial-panel editorial-panel--paper source-panel" data-span="source">
             <div>
-              <p class="mini-label">Year over year</p>
-              <p class="delta" id="hero-yoy">—</p>
+              <p class="eyebrow">Source</p>
+              <h2 class="panel-title">Official snapshot, wired for credibility.</h2>
             </div>
-          </div>
+            <p class="body-copy">
+              Seeded from the USDA NASS Cold Storage report. Releases land around the 22nd each month. Data covers ~150 commodities; this dashboard tracks the 15 most material ones.
+            </p>
+            <div class="source-actions">
+              <a class="source-link" id="report-link" href="https://www.nass.usda.gov/Publications/Todays_Reports/reports/cost0226.pdf" target="_blank" rel="noreferrer">Open official report ↗</a>
+              <a class="source-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">Survey guide ↗</a>
+            </div>
+            <p class="attribution">Uses USDA NASS data. Not endorsed or certified by NASS.</p>
+          </section>
+
+          <!-- ROW 4 — Full-width ranking table -->
+
+          <section class="editorial-panel editorial-panel--ink ranking-panel" data-span="table">
+            <div class="panel-top">
+              <div>
+                <p class="eyebrow eyebrow--light">Operations list</p>
+                <h2 class="panel-title panel-title--light">What is actually taking up freezer real estate?</h2>
+              </div>
+              <p class="mini-note mini-note--light" id="ranking-note">Sorted by latest storage volume</p>
+            </div>
+            <div class="ranking-list" id="ranking-list"></div>
+          </section>
+
+        </main>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           VIEW: THROUGH TIME
+      ════════════════════════════════════════════ -->
+      <div class="view-section view-section--hidden" id="view-through-time">
+        <div class="through-time-header">
+          <p class="eyebrow">5-year archive · monthly snapshots</p>
+          <h2 class="view-title">Every commodity, across time.</h2>
+          <p class="view-subtitle">Each tile shows 60 months of cold storage volumes. Peaks and valleys reveal seasonal rhythms, supply shocks, and the slow drift of American eating habits.</p>
+        </div>
+        <div class="through-time-filter-rail">
+          <button class="filter-pill is-active" data-tt-filter="all" type="button">All</button>
+          <button class="filter-pill" data-tt-filter="dairy" type="button">Dairy</button>
+          <button class="filter-pill" data-tt-filter="produce" type="button">Produce</button>
+          <button class="filter-pill" data-tt-filter="protein" type="button">Meat + poultry</button>
+        </div>
+        <div class="through-time-grid" id="through-time-grid"></div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
+           VIEW: DEEP CUTS
+      ════════════════════════════════════════════ -->
+      <div class="view-section view-section--hidden" id="view-deep-cuts">
+        <div class="deep-cuts-header">
+          <p class="eyebrow">Granular breakdown · what USDA actually tracks</p>
+          <h2 class="view-title">The deep freeze.</h2>
+          <p class="view-subtitle">Beyond the totals — specific cuts, individual fruits, and the vegetables that move millions of pounds at a time.</p>
+        </div>
+
+        <section class="deep-cuts-section">
+          <h3 class="category-banner">Pork cuts</h3>
+          <div class="deep-cuts-grid" id="dc-pork"></div>
         </section>
 
-        <section class="editorial-panel editorial-panel--sun stat-panel" data-span="stat-1">
-          <div>
-            <p class="eyebrow">Fast mover</p>
-            <h2 class="panel-title">Butter snapped back.</h2>
-          </div>
-          <div class="stat-block">
-            <p class="stat-number" id="butter-value">—</p>
-            <p class="stat-unit">lb in storage</p>
-          </div>
-          <div class="stat-deltas">
-            <div>
-              <p class="mini-label">MoM</p>
-              <span class="delta" id="butter-mom">—</span>
-            </div>
-            <div>
-              <p class="mini-label">YoY</p>
-              <span class="delta" id="butter-yoy">—</span>
-            </div>
-          </div>
+        <section class="deep-cuts-section">
+          <h3 class="category-banner">Beef cuts</h3>
+          <div class="deep-cuts-grid" id="dc-beef"></div>
         </section>
 
-        <section class="editorial-panel editorial-panel--coral stat-panel" data-span="stat-2">
-          <div>
-            <p class="eyebrow">Volume leader</p>
-            <h2 class="panel-title">Poultry holds the most ground.</h2>
-          </div>
-          <div class="stat-block">
-            <p class="stat-number" id="poultry-value">—</p>
-            <p class="stat-unit">lb frozen poultry</p>
-          </div>
-          <div class="stat-deltas">
-            <div>
-              <p class="mini-label">MoM</p>
-              <span class="delta" id="poultry-mom">—</span>
-            </div>
-          </div>
+        <section class="deep-cuts-section">
+          <h3 class="category-banner">Frozen fruit</h3>
+          <div class="deep-cuts-grid" id="dc-fruit"></div>
         </section>
 
-        <!-- ═══════════════════════════════════════════
-             ROW 2 — Narrative slab + Chart strip
-        ════════════════════════════════════════════ -->
-
-        <section class="editorial-panel editorial-panel--paper narrative-panel" data-span="narrative">
-          <div>
-            <p class="eyebrow">In plain terms</p>
-            <h2 class="panel-title">A number that earns its size.</h2>
-          </div>
-          <p class="body-copy narrative-copy" id="narrative-copy">Loading…</p>
-          <div class="quiet-metrics">
-            <div>
-              <p class="mini-label">Latest release</p>
-              <p id="release-date">—</p>
-            </div>
-            <div>
-              <p class="mini-label">Next release est.</p>
-              <p id="next-release">—</p>
-            </div>
-          </div>
+        <section class="deep-cuts-section">
+          <h3 class="category-banner">Frozen vegetables</h3>
+          <div class="deep-cuts-grid" id="dc-vegetables"></div>
         </section>
+      </div>
 
-        <section class="editorial-panel editorial-panel--cobalt chart-panel" data-span="chart">
-          <div class="panel-top">
-            <div>
-              <p class="eyebrow">5-year trend</p>
-              <h2 class="panel-title panel-title--light" id="trend-label">Total cold storage trend</h2>
-            </div>
-            <p class="mini-note mini-note--light" id="trend-months"></p>
-          </div>
-          <div class="chart-strip-wrap">
-            <canvas id="trend-canvas" class="trend-canvas" aria-label="5-year trend sparkline"></canvas>
-          </div>
-        </section>
-
-        <!-- ═══════════════════════════════════════════
-             ROW 3 — Cave art + Comparison + Source
-        ════════════════════════════════════════════ -->
-
-        <section class="editorial-panel editorial-panel--kelp cave-panel" data-span="cave">
-          <div class="panel-top">
-            <p class="eyebrow">Cheese cave</p>
-            <p class="mini-note mini-note--light">Scaled from latest mix</p>
-          </div>
-          <div class="cave-stack" id="cave-stack" aria-hidden="true"></div>
-          <p class="panel-footnote-text">
-            Width reflects relative storage volume — American, Swiss, other natural, and butter as the bright outer puck.
-          </p>
-        </section>
-
-        <section class="editorial-panel editorial-panel--paper compare-panel" data-span="compare">
-          <div class="panel-top">
-            <div>
-              <p class="eyebrow">Year ago · last month · latest</p>
-              <h2 class="panel-title" id="compare-title">Storage mix</h2>
-            </div>
-          </div>
-          <div class="compare-grid" id="compare-grid"></div>
-        </section>
-
-        <section class="editorial-panel editorial-panel--paper source-panel" data-span="source">
-          <div>
-            <p class="eyebrow">Source</p>
-            <h2 class="panel-title">Official snapshot, wired for credibility.</h2>
-          </div>
-          <p class="body-copy">
-            Seeded from the USDA NASS Cold Storage report. Releases land around the 22nd each month. Data covers ~150 commodities; this dashboard tracks the 15 most material ones.
-          </p>
-          <div class="source-actions">
-            <a class="source-link" id="report-link" href="https://www.nass.usda.gov/Publications/Todays_Reports/reports/cost0226.pdf" target="_blank" rel="noreferrer">Open official report ↗</a>
-            <a class="source-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">Survey guide ↗</a>
-          </div>
-          <p class="attribution">Uses USDA NASS data. Not endorsed or certified by NASS.</p>
-        </section>
-
-        <!-- ═══════════════════════════════════════════
-             ROW 4 — Full-width ranking table
-        ════════════════════════════════════════════ -->
-
-        <section class="editorial-panel editorial-panel--ink ranking-panel" data-span="table">
-          <div class="panel-top">
-            <div>
-              <p class="eyebrow eyebrow--light">Operations list</p>
-              <h2 class="panel-title panel-title--light">What is actually taking up freezer real estate?</h2>
-            </div>
-            <p class="mini-note mini-note--light" id="ranking-note">Sorted by latest storage volume</p>
-          </div>
-          <div class="ranking-list" id="ranking-list"></div>
-        </section>
-
-      </main>
     </div>
 
     <script type="module" src="./app.js"></script>

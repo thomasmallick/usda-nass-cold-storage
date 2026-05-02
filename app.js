@@ -1,7 +1,8 @@
 const DATA_URL = "./data/cold-storage-archive.json";
+const US_POPULATION = 335_000_000;
 
 // ---------------------------------------------------------------------------
-// Commodity metadata (labels + groups, previously embedded in each JSON record)
+// Commodity metadata
 // ---------------------------------------------------------------------------
 const COMMODITY_LABELS = {
   butter: "Butter",
@@ -38,6 +39,120 @@ const COMMODITY_GROUPS = {
   total_pork: "protein",
   total_frozen_red_meat: "protein",
 };
+
+// Deep-cut commodity metadata
+const DEEP_CUT_LABELS = {
+  // Pork cuts
+  pork_hams:       "Pork hams",
+  pork_ribs:       "Pork ribs",
+  pork_loins:      "Pork loins",
+  pork_butts:      "Pork butts",
+  pork_trimmings:  "Pork trimmings",
+  // Beef cuts
+  beef_boneless:   "Beef (boneless)",
+  beef_bone_in:    "Beef (bone-in)",
+  // Frozen fruit
+  strawberries:    "Strawberries",
+  blueberries:     "Blueberries",
+  raspberries:     "Raspberries",
+  cherries_tart:   "Tart cherries",
+  // Frozen vegetables
+  sweet_corn_cut:  "Sweet corn (cut)",
+  sweet_corn_cob:  "Sweet corn (cob)",
+  beans_green:     "Green beans",
+  carrots:         "Carrots",
+  peas_green:      "Green peas",
+  spinach:         "Spinach",
+  broccoli:        "Broccoli",
+};
+
+const DEEP_CUT_SECTIONS = {
+  pork:       ["pork_hams", "pork_ribs", "pork_loins", "pork_butts", "pork_trimmings"],
+  beef:       ["beef_boneless", "beef_bone_in"],
+  fruit:      ["strawberries", "blueberries", "raspberries", "cherries_tart"],
+  vegetables: ["sweet_corn_cut", "sweet_corn_cob", "beans_green", "carrots", "peas_green", "spinach", "broccoli"],
+};
+
+// ---------------------------------------------------------------------------
+// Insight recipes: per-capita object equivalences for insight badges
+// ---------------------------------------------------------------------------
+const INSIGHT_RECIPES = {
+  butter:               { unit: "sticks",            lbPerUnit: 0.25  },
+  total_natural_cheese: { unit: "1-lb blocks",        lbPerUnit: 1     },
+  american_cheese:      { unit: "slices",             lbPerUnit: 0.0625 },
+  total_chicken:        { unit: "whole birds",        lbPerUnit: 5     },
+  total_turkey:         { unit: "whole turkeys",      lbPerUnit: 16    },
+  total_frozen_poultry: { unit: "whole birds",        lbPerUnit: 5     },
+  total_beef:           { unit: "burgers",            lbPerUnit: 0.25  },
+  pork_bellies:         { unit: "BLTs worth of bacon", lbPerUnit: 0.125 },
+  total_pork:           { unit: "pork chops",        lbPerUnit: 0.625 },
+  pork_ribs:            { unit: "racks of ribs",     lbPerUnit: 3     },
+  pork_hams:            { unit: "holiday hams",      lbPerUnit: 8     },
+  total_frozen_fruit:   { unit: "pints of berries",  lbPerUnit: 0.75  },
+  strawberries:         { unit: "pints of strawberries", lbPerUnit: 0.75 },
+  blueberries:          { unit: "pints of blueberries",  lbPerUnit: 0.75 },
+  total_frozen_vegetables: { unit: "servings of veg", lbPerUnit: 0.5  },
+  sweet_corn_cut:       { unit: "ears of corn",      lbPerUnit: 0.5   },
+  total_frozen_potatoes: { unit: "bags of fries",    lbPerUnit: 2     },
+};
+
+function computeInsight(commodity, archive) {
+  const snapshots = archive.snapshots;
+  if (!snapshots.length) return "";
+
+  const latest = snapshots[snapshots.length - 1];
+  const latestVal = latest.commodities[commodity];
+  if (!latestVal) return "";
+
+  // Rule 1: all-time extreme (requires ≥ 12 months)
+  if (snapshots.length >= 12) {
+    const vals = snapshots.map((s) => s.commodities[commodity] || 0).filter((v) => v > 0);
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    const monthsBack = snapshots.length;
+    if (latestVal >= maxVal * 0.995) return `↑ Highest in ${Math.round(monthsBack / 12)}+ years`;
+    if (latestVal <= minVal * 1.005) return `↓ Lowest in ${Math.round(monthsBack / 12)}+ years`;
+  }
+
+  // Rule 2: year-over-year shock (requires ≥ 13 months)
+  if (snapshots.length >= 13) {
+    const yearAgo = snapshots[snapshots.length - 13]?.commodities[commodity];
+    if (yearAgo) {
+      const yoy = ((latestVal - yearAgo) / yearAgo) * 100;
+      if (Math.abs(yoy) >= 15) {
+        const sign = yoy > 0 ? "↑ Up" : "↓ Down";
+        return `${sign} ${Math.abs(Math.round(yoy))}% from last year`;
+      }
+    }
+  }
+
+  // Rule 3: per-capita object equivalence
+  const recipe = INSIGHT_RECIPES[commodity];
+  if (recipe) {
+    const lb = latestVal * 1000;
+    const perAmerican = lb / US_POPULATION / recipe.lbPerUnit;
+    if (perAmerican >= 0.1) {
+      const formatted = perAmerican >= 10
+        ? Math.round(perAmerican).toLocaleString("en-US")
+        : (Math.round(perAmerican * 10) / 10).toLocaleString("en-US");
+      return `≈ ${formatted} ${recipe.unit} / American`;
+    }
+  }
+
+  return "";
+}
+
+function renderInsightBadges(data) {
+  const badges = [
+    { id: "insight-butter",  key: "butter" },
+    { id: "insight-poultry", key: "total_frozen_poultry" },
+  ];
+  for (const { id, key } of badges) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.textContent = computeInsight(key, data.archive);
+  }
+}
 
 // Non-overlapping keys used for the grand total.
 const GRAND_TOTAL_KEYS = [
@@ -176,7 +291,7 @@ function computeGrandTotal(snapshot, keys = GRAND_TOTAL_KEYS) {
 }
 
 function buildAggregateSeries(data) {
-  const get = (key) => data.commodities[key].values;
+  const get = (key) => data.commodities[key]?.values;
   const sum = (keys, field) => keys.reduce((acc, key) => acc + (get(key)?.[field] || 0), 0);
 
   return {
@@ -327,21 +442,21 @@ function buildNarrativeCopy(data, filter) {
   if (filter === "dairy") {
     const butterLb = data.commodities.butter.values.latest * 1000;
     const sticks = Math.round(butterLb / 0.25);
-    const sticksPerAmerican = (sticks / 335_000_000).toFixed(1);
+    const sticksPerAmerican = (sticks / US_POPULATION).toFixed(1);
     return `The US currently stores enough butter for every American to unwrap about <strong>${sticksPerAmerican} sticks</strong> — a reserve that swells in late summer and draws down through the holidays.`;
   }
 
   if (filter === "protein") {
     const chickenLb = data.commodities.total_chicken.values.latest * 1000;
     const wholeBirds = Math.round(chickenLb / 5);
-    const birdsPerAmerican = (wholeBirds / 335_000_000).toFixed(1);
+    const birdsPerAmerican = (wholeBirds / US_POPULATION).toFixed(1);
     return `US frozen chicken reserves represent roughly <strong>${birdsPerAmerican} whole birds per American</strong> — a buffer the system maintains regardless of what happens at the farm gate this week.`;
   }
 
   if (filter === "produce") {
     const vegLb = data.commodities.total_frozen_vegetables.values.latest * 1000;
     const servings = Math.round(vegLb / 0.5);
-    const servingsPerAmerican = Math.round(servings / 335_000_000);
+    const servingsPerAmerican = Math.round(servings / US_POPULATION);
     return `Frozen vegetable stores alone hold the equivalent of <strong>${servingsPerAmerican} half-pound servings per American</strong> — about ${Math.round(servingsPerAmerican / 365 * 10) / 10} years of daily portions for every person in the country.`;
   }
 
@@ -349,7 +464,7 @@ function buildNarrativeCopy(data, filter) {
   const grandTotal = computeGrandTotal(getLatestSnapshot(data.archive));
   const grandTotalLb = grandTotal * 1000;
   const cargoShips = Math.round(grandTotalLb / 154_000_000); // ~70k DWT ship ≈ 154M lb
-  const lbPerAmerican = Math.round(grandTotalLb / 335_000_000);
+  const lbPerAmerican = Math.round(grandTotalLb / US_POPULATION);
   return `The US cold chain holds <strong>${formatCompact.format(grandTotalLb)} lb</strong> of frozen food right now — about <strong>${lbPerAmerican} lb per American</strong>, or the equivalent cargo of roughly ${cargoShips} fully loaded container ships.`;
 }
 
@@ -424,9 +539,11 @@ function renderCave(data) {
     { key: "other_natural_cheese", className: "other", label: "Other natural" },
     { key: "butter", className: "butter", label: "Butter" },
   ];
-  const max = Math.max(...layers.map((item) => data.commodities[item.key].values.latest));
+  const validLayers = layers.filter((item) => data.commodities[item.key]);
+  if (!validLayers.length) { cave.innerHTML = ""; return; }
+  const max = Math.max(...validLayers.map((item) => data.commodities[item.key].values.latest));
 
-  cave.innerHTML = layers
+  cave.innerHTML = validLayers
     .map((item, index) => {
       const latest = data.commodities[item.key].values.latest;
       const width = 52 + (latest / max) * 48;
@@ -585,6 +702,170 @@ function renderRanking(data, filter) {
 }
 
 // ---------------------------------------------------------------------------
+// Render: Through Time — small multiples of all 15 commodities
+// ---------------------------------------------------------------------------
+const TT_COLORS = {
+  dairy:   { line: "#8a6a22", bg: "dairy"   },
+  produce: { line: "#2e5c1e", bg: "produce" },
+  protein: { line: "#b84a1c", bg: "protein" },
+};
+
+function renderThroughTime(data, filter = "all") {
+  const grid = document.getElementById("through-time-grid");
+  if (!grid) return;
+
+  const keys = filter === "all"
+    ? Object.keys(COMMODITY_LABELS)
+    : Object.keys(COMMODITY_LABELS).filter((k) => COMMODITY_GROUPS[k] === filter);
+
+  const snapshots = data.archive.snapshots;
+
+  grid.innerHTML = keys.map((key) => {
+    const label = COMMODITY_LABELS[key];
+    const group = COMMODITY_GROUPS[key];
+    const colors = TT_COLORS[group] || TT_COLORS.protein;
+    const series = buildSparklineSeries(data.archive, key, 60);
+    const latest = series[series.length - 1] || 0;
+    const yearAgo = series.length >= 13 ? series[series.length - 13] : null;
+    const yoy = yearAgo ? ((latest - yearAgo) / yearAgo) * 100 : null;
+    const yoyText = yoy !== null ? `${yoy >= 0 ? "+" : ""}${Math.round(yoy)}% YoY` : "";
+    const canvasId = `tt-canvas-${key}`;
+
+    return `
+      <div class="sparkline-tile sparkline-tile--${group}">
+        <div class="sparkline-tile-top">
+          <p class="sparkline-tile-label">${label}</p>
+          <p class="sparkline-tile-value">${formatCompact.format(latest * 1000)}</p>
+        </div>
+        <div class="sparkline-tile-canvas-wrap">
+          <canvas class="sparkline-tile-canvas" id="${canvasId}" aria-label="${label} 5-year trend"></canvas>
+        </div>
+        ${yoyText ? `<p class="sparkline-tile-yoy">${yoyText}</p>` : ""}
+      </div>`;
+  }).join("");
+
+  // Draw sparklines after DOM insertion
+  requestAnimationFrame(() => {
+    keys.forEach((key) => {
+      const canvas = document.getElementById(`tt-canvas-${key}`);
+      if (!canvas) return;
+      const group = COMMODITY_GROUPS[key];
+      const colors = TT_COLORS[group] || TT_COLORS.protein;
+      const series = buildSparklineSeries(data.archive, key, 60);
+      if (series.length >= 2) {
+        drawSparkline(canvas, series, { lineColor: colors.line, fillOpacity: 0.15, lineWidth: 1.5 });
+      }
+    });
+  });
+}
+
+function bindThroughTimeFilters(data) {
+  const pills = document.querySelectorAll("[data-tt-filter]");
+  let active = "all";
+
+  function update(next) {
+    active = next;
+    pills.forEach((p) => p.classList.toggle("is-active", p.dataset.ttFilter === next));
+    renderThroughTime(data, next);
+  }
+
+  pills.forEach((p) => p.addEventListener("click", () => update(p.dataset.ttFilter)));
+  update(active);
+}
+
+// ---------------------------------------------------------------------------
+// Render: Deep Cuts — gallery grid by category
+// ---------------------------------------------------------------------------
+function renderDeepCutSection(archive, sectionId, keys) {
+  const container = document.getElementById(sectionId);
+  if (!container) return;
+
+  container.innerHTML = keys.map((key) => {
+    const label = DEEP_CUT_LABELS[key] || key;
+    const series = buildSparklineSeries(archive, key, 60);
+    const latest = series[series.length - 1] || 0;
+    const canvasId = `dc-canvas-${key}`;
+    const hasData = latest > 0;
+    const insight = computeInsight(key, archive);
+
+    return `
+      <div class="dc-tile">
+        <div class="dc-tile-top">
+          <p class="dc-tile-label">${label}</p>
+          ${hasData
+            ? `<p class="dc-tile-value">${formatCompact.format(latest * 1000)}<span class="dc-tile-unit"> lb</span></p>`
+            : `<p class="dc-tile-value" style="opacity:.35">—</p>`}
+        </div>
+        ${hasData && series.length >= 2
+          ? `<div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}"></canvas></div>`
+          : `<p class="dc-tile-no-data">Backfill pending</p>`}
+        ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
+      </div>`;
+  }).join("");
+
+  requestAnimationFrame(() => {
+    keys.forEach((key) => {
+      const canvas = document.getElementById(`dc-canvas-${key}`);
+      if (!canvas) return;
+      const series = buildSparklineSeries(archive, key, 60);
+      if (series.length >= 2) {
+        drawSparkline(canvas, series, { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5 });
+      }
+    });
+  });
+}
+
+function renderDeepCuts(data) {
+  renderDeepCutSection(data.archive, "dc-pork",       DEEP_CUT_SECTIONS.pork);
+  renderDeepCutSection(data.archive, "dc-beef",       DEEP_CUT_SECTIONS.beef);
+  renderDeepCutSection(data.archive, "dc-fruit",      DEEP_CUT_SECTIONS.fruit);
+  renderDeepCutSection(data.archive, "dc-vegetables", DEEP_CUT_SECTIONS.vegetables);
+}
+
+// ---------------------------------------------------------------------------
+// Tab router (hash-based: #overview, #through-time, #deep-cuts)
+// ---------------------------------------------------------------------------
+function bindTabRouter(data) {
+  const tabs = document.querySelectorAll(".tab-pill[data-tab]");
+  const views = document.querySelectorAll(".view-section");
+  let ttInitialized = false;
+  let dcInitialized = false;
+
+  function activate(tabId) {
+    tabs.forEach((t) => t.classList.toggle("tab-pill--active", t.dataset.tab === tabId));
+    views.forEach((v) => {
+      const matches = v.id === `view-${tabId}`;
+      v.classList.toggle("view-section--hidden", !matches);
+    });
+
+    if (tabId === "through-time" && !ttInitialized) {
+      bindThroughTimeFilters(data);
+      ttInitialized = true;
+    }
+    if (tabId === "deep-cuts" && !dcInitialized) {
+      renderDeepCuts(data);
+      dcInitialized = true;
+    }
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      history.pushState(null, "", `#${tab.dataset.tab}`);
+      activate(tab.dataset.tab);
+    });
+  });
+
+  window.addEventListener("popstate", () => {
+    const hash = location.hash.replace("#", "") || "overview";
+    activate(hash);
+  });
+
+  // Honour hash on load
+  const initial = location.hash.replace("#", "") || "overview";
+  activate(initial);
+}
+
+// ---------------------------------------------------------------------------
 // Filter binding (drives chart strip + narrative + comparison + ranking)
 // ---------------------------------------------------------------------------
 function bindFilters(data) {
@@ -618,7 +899,9 @@ async function init() {
   const data = buildCompatData(archive);
   renderHero(data);
   renderCave(data);
+  renderInsightBadges(data);
   bindFilters(data);
+  bindTabRouter(data);
 }
 
 init().catch((error) => {
