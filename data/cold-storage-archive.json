@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated": "2026-04-30",
+    "updated": "2026-05-25",
     "source": "USDA NASS Cold Storage report (manual seed) + Quick Stats API",
     "units": "1000 lb",
     "note": "Values in 1000 lb. Dashboard multiplies by 1000 for display. Run scripts/fetch-usda.py --backfill 60 to populate historical snapshots."
@@ -18,6 +18,26 @@
         "total_beef": 427337,
         "total_pork": 403805,
         "total_frozen_red_meat": 831142
+      }
+    },
+    {
+      "observationDate": "2026-04-30",
+      "commodities": {
+        "butter": 308223,
+        "american_cheese": 817579,
+        "swiss_cheese": 24886,
+        "other_natural_cheese": 575184,
+        "total_natural_cheese": 1417649,
+        "total_chicken": 762051,
+        "total_turkey": 314956,
+        "total_frozen_poultry": 1078506,
+        "total_frozen_fruit": 1009023,
+        "total_frozen_vegetables": 1498000,
+        "total_frozen_potatoes": 1286306,
+        "total_beef": 408343,
+        "pork_bellies": 52396,
+        "total_pork": 435792,
+        "total_frozen_red_meat": 861293
       }
     }
   ]
