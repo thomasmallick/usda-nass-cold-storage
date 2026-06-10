@@ -710,13 +710,54 @@ a {
   opacity: 0.7;
 }
 
-/* ── Deep Cuts view ──────────────────────────────────────── */
+/* ── Chart tooltip ───────────────────────────────────────── */
+.chart-strip-wrap {
+  position: relative;
+}
+
+.chart-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--ed-paper-2);
+  color: var(--ed-ink);
+  padding: 0.4rem 0.7rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+.chart-tooltip--visible { opacity: 1; }
+
+.chart-tooltip-date {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.chart-tooltip-value {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ── Deep Cuts v2 ────────────────────────────────────────── */
 .deep-cuts-header {
   margin-bottom: var(--ed-space-5);
 }
 
-.deep-cuts-section {
-  margin-bottom: var(--ed-space-5);
+.dc-section {
+  margin-bottom: var(--ed-space-6);
 }
 
 .category-banner {
@@ -731,21 +772,73 @@ a {
   border-bottom: var(--ed-line);
 }
 
-.deep-cuts-grid {
+/* Curiosity spotlight cards */
+.dc-curiosities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1px;
-  background: color-mix(in srgb, var(--ed-ink) 12%, transparent);
-  border: var(--ed-line);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ed-space-3);
 }
 
+.dc-curiosity-card {
+  padding: var(--ed-space-4);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ed-space-2);
+  min-height: 200px;
+}
+
+.dc-curiosity-card--lavender { background: var(--em-lavender); color: var(--ed-ink); }
+.dc-curiosity-card--kelp     { background: var(--em-kelp);     color: var(--ed-paper-2); }
+.dc-curiosity-card--cobalt   { background: var(--em-cobalt);   color: var(--ed-paper-2); }
+.dc-curiosity-card--sun      { background: var(--em-sun);      color: var(--ed-ink); }
+.dc-curiosity-card--paper    { background: var(--ed-paper-2);  color: var(--ed-ink); border: var(--ed-line); }
+.dc-curiosity-card--coral    { background: var(--em-coral);    color: var(--ed-paper-2); }
+
+.dc-curiosity-eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.dc-curiosity-name {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  flex-grow: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.dc-curiosity-copy {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+/* Mixed grid: tracked tiles + discovery chips */
+.dc-mixed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--ed-space-3);
+  align-items: start;
+}
+
+/* Tracked data tile */
 .dc-tile {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   gap: var(--ed-space-2);
   padding: var(--ed-space-4);
   background: var(--ed-paper-2);
+  border: var(--ed-line);
+  border-radius: 3px;
   min-height: 160px;
 }
 
@@ -758,30 +851,30 @@ a {
 .dc-tile-label {
   margin: 0;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .dc-tile-value {
   margin: 0;
   font-family: var(--ed-font-display);
-  font-size: 1.6rem;
+  font-size: 1.55rem;
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
 
 .dc-tile-unit {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .dc-tile-canvas-wrap {
   flex: 1;
-  min-height: 50px;
-  display: flex;
-  align-items: stretch;
+  min-height: 48px;
 }
 
 .dc-tile-canvas {
@@ -794,9 +887,72 @@ a {
   flex: 1;
   display: flex;
   align-items: center;
-  font-size: 0.78rem;
-  opacity: 0.45;
+  font-size: 0.75rem;
+  opacity: 0.35;
   font-style: italic;
+}
+
+/* Discovery chip: USDA tracks it, we don't have sparklines */
+.dc-chip {
+  padding: var(--ed-space-3) var(--ed-space-3);
+  border: var(--ed-line);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: transparent;
+}
+
+.dc-chip-name {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dc-chip-tag {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.35;
+}
+
+/* Grand Ledger */
+.dc-ledger-intro {
+  margin: 0 0 var(--ed-space-4);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  opacity: 0.6;
+  max-width: 60ch;
+}
+
+.dc-ledger {
+  column-count: 4;
+  column-gap: var(--ed-space-5);
+}
+
+.dc-ledger-item {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ed-ink) 8%, transparent);
+  break-inside: avoid;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--ed-space-2);
+}
+
+.dc-ledger-item-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.3;
+  flex-shrink: 0;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
@@ -823,4 +979,8 @@ a {
   .ranking-bar-shell { display: none; }
 
   .chart-strip-wrap { min-height: 120px; }
+
+  .dc-curiosities-grid { grid-template-columns: 1fr; }
+  .dc-mixed-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .dc-ledger { column-count: 2; }
 }

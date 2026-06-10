@@ -66,12 +66,43 @@ const DEEP_CUT_LABELS = {
   broccoli:        "Broccoli",
 };
 
-const DEEP_CUT_SECTIONS = {
-  pork:       ["pork_hams", "pork_ribs", "pork_loins", "pork_butts", "pork_trimmings"],
-  beef:       ["beef_boneless", "beef_bone_in"],
-  fruit:      ["strawberries", "blueberries", "raspberries", "cherries_tart"],
-  vegetables: ["sweet_corn_cut", "sweet_corn_cob", "beans_green", "carrots", "peas_green", "spinach", "broccoli"],
+// ---------------------------------------------------------------------------
+// Deep Cuts v2 — full USDA inventory
+// ---------------------------------------------------------------------------
+const DC_CURIOSITIES = [
+  { label: "Boysenberries",  color: "lavender", copy: "Yes, specifically boysenberries. A dedicated line item in the national cold storage ledger." },
+  { label: "Okra",           color: "kelp",     copy: "The South's frozen frontier — millions of pounds, quietly sitting in cold storage." },
+  { label: "Hops",           color: "cobalt",   copy: "Beer's raw material, stored cold before it becomes your weekend. Supply chain secured." },
+  { label: "Honey",          color: "sun",      copy: "Honey keeps for millennia on a shelf. In bulk, it gets the cold treatment anyway." },
+  { label: "Buttermilk",     color: "paper",    copy: "Frozen buttermilk reserves. The pancake supply chain runs deeper than you think." },
+  { label: "Pickles",        color: "coral",    copy: "Not frozen — refrigerated. But tracked with the same federal rigor as beef." },
+];
+
+const DC_SECTIONS = {
+  meat: {
+    tracked:   ["total_frozen_poultry", "total_chicken", "total_turkey", "total_frozen_red_meat", "total_beef", "total_pork", "pork_bellies", "pork_hams", "pork_ribs", "pork_loins", "pork_butts", "pork_trimmings", "beef_boneless", "beef_bone_in"],
+    discovery: ["Veal", "Lamb & Mutton", "Ducks"],
+  },
+  dairy: {
+    tracked:   ["butter", "total_natural_cheese", "american_cheese", "swiss_cheese", "other_natural_cheese"],
+    discovery: ["Milk", "Buttermilk", "Whey", "Eggs"],
+  },
+  fruit: {
+    tracked:   ["total_frozen_fruit", "strawberries", "blueberries", "raspberries", "cherries_tart"],
+    discovery: ["Blackberries", "Boysenberries", "Apples", "Apricots", "Grapes", "Oranges", "Peaches", "Other Fruit"],
+  },
+  vegetables: {
+    tracked:   ["total_frozen_vegetables", "total_frozen_potatoes", "sweet_corn_cut", "sweet_corn_cob", "beans_green", "peas_green", "carrots", "broccoli", "spinach"],
+    discovery: ["Asparagus", "Brussels Sprouts", "Cauliflower", "Greens", "Okra", "Onions", "Peas & Carrots", "Squash", "Mixed Vegetables", "Other Vegetables"],
+  },
 };
+
+const DC_LEDGER_ITEMS = [
+  "Barley", "Cake & Meal", "Canola", "Chickpeas", "Corn (Field)", "Flaxseed",
+  "Hops", "Honey", "Lentils", "Millfeed", "Mustard Seed", "Oats",
+  "Peanuts", "Pecans", "Pickles", "Rapeseed", "Rice", "Rye",
+  "Safflower", "Sorghum", "Soybeans", "Sunflower Seed", "Wheat", "Whey",
+];
 
 // ---------------------------------------------------------------------------
 // Insight recipes: per-capita object equivalences for insight badges
@@ -376,7 +407,7 @@ function estimatedNextReleaseLabel(today = new Date()) {
 // ---------------------------------------------------------------------------
 // Sparkline canvas renderer
 // ---------------------------------------------------------------------------
-function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5 } = {}) {
+function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5, hoverIdx = null } = {}) {
   if (!values || values.length < 2) return;
 
   const dpr = window.devicePixelRatio || 1;
@@ -418,12 +449,38 @@ function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.
   ctx.lineCap = "round";
   ctx.stroke();
 
-  // Latest point dot
-  const last = pts[pts.length - 1];
-  ctx.beginPath();
-  ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = lineColor;
-  ctx.fill();
+  // Latest point dot (hidden when hovering)
+  if (hoverIdx === null) {
+    const last = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor;
+    ctx.fill();
+  }
+
+  // Hover indicator: vertical hairline + dot
+  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < pts.length) {
+    const hp = pts[hoverIdx];
+    // Hairline
+    ctx.beginPath();
+    ctx.moveTo(hp.x, padding);
+    ctx.lineTo(hp.x, cssH - padding);
+    ctx.strokeStyle = hexToRgba(lineColor, 0.35);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Outer dot
+    ctx.beginPath();
+    ctx.arc(hp.x, hp.y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor;
+    ctx.fill();
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(hp.x, hp.y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba(lineColor, 0.35);
+    ctx.fill();
+  }
 }
 
 function hexToRgba(hex, opacity) {
@@ -592,12 +649,62 @@ function renderChartStrip(data, filter) {
   if (label) label.textContent = catDef?.title || "Total cold storage trend";
   if (monthCount) monthCount.textContent = `${values.length} monthly snapshots`;
 
-  drawSparkline(canvas, values, {
-    lineColor: "#fbf5ea",
-    fillOpacity: 0.14,
-    padding: 12,
-    lineWidth: 2,
-  });
+  const snapshots = data.archive.snapshots.slice(-values.length);
+  const dates = snapshots.map((s) => s.observationDate);
+
+  const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2 };
+  drawSparkline(canvas, values, opts);
+  bindChartHover(canvas, values, dates, opts);
+}
+
+function bindChartHover(canvas, values, dates, opts) {
+  const tooltip = document.getElementById("chart-tooltip");
+  if (!tooltip) return;
+
+  // Remove previous listeners
+  if (canvas._hoverCleanup) { canvas._hoverCleanup(); }
+
+  const dateEl = tooltip.querySelector(".chart-tooltip-date");
+  const valueEl = tooltip.querySelector(".chart-tooltip-value");
+  const padding = opts.padding ?? 12;
+  const n = values.length;
+
+  function getIdx(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const step = (rect.width - padding * 2) / (n - 1);
+    return Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+  }
+
+  function onMove(e) {
+    const idx = getIdx(e.clientX);
+    drawSparkline(canvas, values, { ...opts, hoverIdx: idx });
+
+    const rect = canvas.getBoundingClientRect();
+    const step = (rect.width - padding * 2) / (n - 1);
+    const xPx = padding + idx * step;
+    const xPct = (xPx / rect.width) * 100;
+
+    tooltip.style.left = `${xPct}%`;
+    tooltip.style.transform = xPct > 72 ? "translateX(-92%)" : "translateX(-8%)";
+    tooltip.classList.add("chart-tooltip--visible");
+
+    const d = new Date(dates[idx] + "T12:00:00Z");
+    dateEl.textContent = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    valueEl.textContent = formatCompact.format(values[idx] * 1000) + " lb";
+  }
+
+  function onLeave() {
+    drawSparkline(canvas, values, opts);
+    tooltip.classList.remove("chart-tooltip--visible");
+  }
+
+  canvas.addEventListener("mousemove", onMove);
+  canvas.addEventListener("mouseleave", onLeave);
+  canvas._hoverCleanup = () => {
+    canvas.removeEventListener("mousemove", onMove);
+    canvas.removeEventListener("mouseleave", onLeave);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -776,50 +883,81 @@ function bindThroughTimeFilters(data) {
 // ---------------------------------------------------------------------------
 // Render: Deep Cuts — gallery grid by category
 // ---------------------------------------------------------------------------
-function renderDeepCutSection(archive, sectionId, keys) {
-  const container = document.getElementById(sectionId);
+// ---------------------------------------------------------------------------
+// Deep Cuts v2 render functions
+// ---------------------------------------------------------------------------
+function renderDcTrackedTile(archive, key) {
+  const label = DEEP_CUT_LABELS[key] || COMMODITY_LABELS[key] || key;
+  const series = buildSparklineSeries(archive, key, 60);
+  const latest = series[series.length - 1] || 0;
+  const canvasId = `dc-canvas-${key}`;
+  const hasData = latest > 0;
+  const insight = computeInsight(key, archive);
+  return `
+    <div class="dc-tile">
+      <div class="dc-tile-top">
+        <p class="dc-tile-label">${label}</p>
+        ${hasData
+          ? `<p class="dc-tile-value">${formatCompact.format(latest * 1000)}<span class="dc-tile-unit"> lb</span></p>`
+          : `<p class="dc-tile-value" style="opacity:.3">—</p>`}
+      </div>
+      ${hasData && series.length >= 2
+        ? `<div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}"></canvas></div>`
+        : `<p class="dc-tile-no-data">No data for latest month</p>`}
+      ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
+    </div>`;
+}
+
+function renderDcDiscoveryChip(name) {
+  return `<div class="dc-chip"><p class="dc-chip-name">${name}</p><p class="dc-chip-tag">USDA tracked</p></div>`;
+}
+
+function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
+  const container = document.getElementById(containerId);
   if (!container) return;
-
-  container.innerHTML = keys.map((key) => {
-    const label = DEEP_CUT_LABELS[key] || key;
-    const series = buildSparklineSeries(archive, key, 60);
-    const latest = series[series.length - 1] || 0;
-    const canvasId = `dc-canvas-${key}`;
-    const hasData = latest > 0;
-    const insight = computeInsight(key, archive);
-
-    return `
-      <div class="dc-tile">
-        <div class="dc-tile-top">
-          <p class="dc-tile-label">${label}</p>
-          ${hasData
-            ? `<p class="dc-tile-value">${formatCompact.format(latest * 1000)}<span class="dc-tile-unit"> lb</span></p>`
-            : `<p class="dc-tile-value" style="opacity:.35">—</p>`}
-        </div>
-        ${hasData && series.length >= 2
-          ? `<div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}"></canvas></div>`
-          : `<p class="dc-tile-no-data">Backfill pending</p>`}
-        ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
-      </div>`;
-  }).join("");
-
+  container.innerHTML =
+    tracked.map((key) => renderDcTrackedTile(archive, key)).join("") +
+    discovery.map((name) => renderDcDiscoveryChip(name)).join("");
+  // Draw sparklines after paint
   requestAnimationFrame(() => {
-    keys.forEach((key) => {
+    tracked.forEach((key) => {
       const canvas = document.getElementById(`dc-canvas-${key}`);
       if (!canvas) return;
       const series = buildSparklineSeries(archive, key, 60);
       if (series.length >= 2) {
-        drawSparkline(canvas, series, { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5 });
+        drawSparkline(canvas, series, { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5, padding: 8 });
       }
     });
   });
 }
 
 function renderDeepCuts(data) {
-  renderDeepCutSection(data.archive, "dc-pork",       DEEP_CUT_SECTIONS.pork);
-  renderDeepCutSection(data.archive, "dc-beef",       DEEP_CUT_SECTIONS.beef);
-  renderDeepCutSection(data.archive, "dc-fruit",      DEEP_CUT_SECTIONS.fruit);
-  renderDeepCutSection(data.archive, "dc-vegetables", DEEP_CUT_SECTIONS.vegetables);
+  const { archive } = data;
+
+  // Curiosities
+  const curiosEl = document.getElementById("dc-curiosities");
+  if (curiosEl) {
+    curiosEl.innerHTML = DC_CURIOSITIES.map(({ label, color, copy }) => `
+      <div class="dc-curiosity-card dc-curiosity-card--${color}">
+        <p class="dc-curiosity-eyebrow">USDA tracks this</p>
+        <p class="dc-curiosity-name">${label}.</p>
+        <p class="dc-curiosity-copy">${copy}</p>
+      </div>`).join("");
+  }
+
+  // Mixed sections
+  renderDcMixedSection(archive, "dc-meat-full",   DC_SECTIONS.meat);
+  renderDcMixedSection(archive, "dc-dairy-full",  DC_SECTIONS.dairy);
+  renderDcMixedSection(archive, "dc-fruit-full",  DC_SECTIONS.fruit);
+  renderDcMixedSection(archive, "dc-veg-full",    DC_SECTIONS.vegetables);
+
+  // Grand Ledger
+  const ledger = document.getElementById("dc-ledger");
+  if (ledger) {
+    ledger.innerHTML = DC_LEDGER_ITEMS.map((name) =>
+      `<p class="dc-ledger-item"><span>${name}</span><span class="dc-ledger-item-tag">USDA</span></p>`
+    ).join("");
+  }
 }
 
 // ---------------------------------------------------------------------------

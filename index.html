@@ -148,6 +148,10 @@
             </div>
             <div class="chart-strip-wrap">
               <canvas id="trend-canvas" class="trend-canvas" aria-label="5-year trend sparkline"></canvas>
+              <div class="chart-tooltip" id="chart-tooltip" aria-hidden="true">
+                <p class="chart-tooltip-date"></p>
+                <p class="chart-tooltip-value"></p>
+              </div>
             </div>
           </section>
 
@@ -228,29 +232,40 @@
       ════════════════════════════════════════════ -->
       <div class="view-section view-section--hidden" id="view-deep-cuts">
         <div class="deep-cuts-header">
-          <p class="eyebrow">Granular breakdown · what USDA actually tracks</p>
+          <p class="eyebrow">The full inventory · 70+ commodities</p>
           <h2 class="view-title">The deep freeze.</h2>
-          <p class="view-subtitle">Beyond the totals — specific cuts, individual fruits, and the vegetables that move millions of pounds at a time.</p>
+          <p class="view-subtitle">Everything the US stores cold — from 800M lb of chicken to things you had no idea anyone was tracking.</p>
         </div>
 
-        <section class="deep-cuts-section">
-          <h3 class="category-banner">Pork cuts</h3>
-          <div class="deep-cuts-grid" id="dc-pork"></div>
+        <section class="dc-section">
+          <h3 class="category-banner">Things you didn't know they tracked</h3>
+          <div class="dc-curiosities-grid" id="dc-curiosities"></div>
         </section>
 
-        <section class="deep-cuts-section">
-          <h3 class="category-banner">Beef cuts</h3>
-          <div class="deep-cuts-grid" id="dc-beef"></div>
+        <section class="dc-section">
+          <h3 class="category-banner">Meat &amp; Poultry</h3>
+          <div class="dc-mixed-grid" id="dc-meat-full"></div>
         </section>
 
-        <section class="deep-cuts-section">
-          <h3 class="category-banner">Frozen fruit</h3>
-          <div class="deep-cuts-grid" id="dc-fruit"></div>
+        <section class="dc-section">
+          <h3 class="category-banner">Dairy</h3>
+          <div class="dc-mixed-grid" id="dc-dairy-full"></div>
         </section>
 
-        <section class="deep-cuts-section">
-          <h3 class="category-banner">Frozen vegetables</h3>
-          <div class="deep-cuts-grid" id="dc-vegetables"></div>
+        <section class="dc-section">
+          <h3 class="category-banner">Frozen Fruit</h3>
+          <div class="dc-mixed-grid" id="dc-fruit-full"></div>
+        </section>
+
+        <section class="dc-section">
+          <h3 class="category-banner">Frozen Vegetables</h3>
+          <div class="dc-mixed-grid" id="dc-veg-full"></div>
+        </section>
+
+        <section class="dc-section">
+          <h3 class="category-banner">Grains, Oilseeds &amp; Everything Else</h3>
+          <p class="dc-ledger-intro">USDA also tracks cold storage for grains, oilseeds, and agricultural commodities you'd never expect to see in a frozen food report.</p>
+          <div class="dc-ledger" id="dc-ledger"></div>
         </section>
       </div>
 
