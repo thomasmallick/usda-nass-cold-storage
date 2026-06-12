@@ -19,6 +19,9 @@
   --ed-space-5: 2rem;
   --ed-space-6: 3rem;
 
+  /* Motion */
+  --ed-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* Typography */
   --ed-font-sans: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
   --ed-font-display: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
@@ -119,14 +122,14 @@ a {
   font-size: 0.9rem;
   cursor: pointer;
   transition:
-    background-color 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
+    background-color 180ms var(--ed-spring),
+    color 180ms var(--ed-spring),
+    transform 200ms var(--ed-spring);
 }
 
 .filter-pill:hover,
 .filter-pill:focus-visible {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   background: color-mix(in srgb, var(--ed-ink) 6%, transparent);
 }
 
@@ -243,7 +246,7 @@ a {
 
 .hero-number-row {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   gap: 0.4rem;
   flex-wrap: wrap;
 }
@@ -256,7 +259,6 @@ a {
 }
 
 .hero-unit {
-  padding-bottom: 1rem;
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -320,6 +322,13 @@ a {
   font-size: clamp(2.4rem, 4.5vw, 4.4rem);
   line-height: 0.9;
   letter-spacing: -0.06em;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* Narrow yellow stat panel (spans 2 cols) — keep the big number inside it */
+[data-span="stat-1"] .stat-number {
+  font-size: clamp(2rem, 2.6vw, 3rem);
 }
 
 .stat-unit {
@@ -392,9 +401,22 @@ a {
   z-index: 1;
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  align-items: baseline;
+  gap: 0.5rem;
   font-size: 0.88rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.cave-layer-label > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cave-layer-label > span:last-child {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ── Compare grid ────────────────────────────────────────── */
@@ -551,6 +573,29 @@ a {
   50%       { transform: translateX(5px); }
 }
 
+/* ── Tactile micro-interactions: springy hover lift ─────── */
+.sparkline-tile,
+.dc-tile,
+.dc-chip,
+.dc-curiosity-card,
+.compare-row,
+.ranking-row {
+  transition:
+    transform 200ms var(--ed-spring),
+    box-shadow 200ms var(--ed-spring);
+  will-change: transform;
+}
+
+.sparkline-tile:hover,
+.dc-tile:hover,
+.dc-chip:hover,
+.dc-curiosity-card:hover,
+.compare-row:hover,
+.ranking-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
@@ -579,14 +624,14 @@ a {
   cursor: pointer;
   letter-spacing: 0.02em;
   transition:
-    background-color 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
+    background-color 180ms var(--ed-spring),
+    color 180ms var(--ed-spring),
+    transform 200ms var(--ed-spring);
 }
 
 .tab-pill:hover,
 .tab-pill:focus-visible {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   background: color-mix(in srgb, var(--ed-ink) 8%, transparent);
 }
 
@@ -618,18 +663,29 @@ a {
 }
 
 /* ── Insight badges ──────────────────────────────────────── */
-.stat-panel { position: relative; }
+.stat-panel {
+  position: relative;
+  justify-content: flex-start;
+  gap: var(--ed-space-3);
+  overflow: visible;
+}
+
+/* Push the insight badge to the bottom while the stat block sits up top */
+.stat-panel .insight-badge { margin-top: auto; }
 
 .insight-badge {
-  display: inline-block;
+  display: block;
+  align-self: flex-start;
   padding: 0.3rem 0.65rem;
-  border-radius: 999px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--ed-ink) 10%, transparent);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.3;
   max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .insight-badge:empty { display: none; }
@@ -645,6 +701,35 @@ a {
   flex-wrap: wrap;
   margin-bottom: var(--ed-space-4);
 }
+
+.tt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ed-space-3);
+  margin: 0 0 var(--ed-space-4);
+}
+
+.tt-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.tt-legend-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--ed-ink) 14%, transparent);
+}
+
+.tt-legend-swatch--dairy   { background: color-mix(in srgb, var(--em-sun) 18%, var(--ed-paper-2)); }
+.tt-legend-swatch--protein { background: color-mix(in srgb, var(--em-coral) 12%, var(--ed-paper-2)); }
+.tt-legend-swatch--produce { background: color-mix(in srgb, var(--em-kelp) 14%, var(--ed-paper-2)); }
 
 .through-time-grid {
   display: grid;
@@ -751,6 +836,47 @@ a {
   letter-spacing: -0.02em;
 }
 
+/* Shared floating tooltip for all small-tile sparklines */
+.spark-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  background: var(--ed-paper-2);
+  color: var(--ed-ink);
+  padding: 0.4rem 0.7rem;
+  border-radius: 3px;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+.spark-tooltip--visible { opacity: 1; }
+
+.spark-tooltip-date {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.spark-tooltip-value {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Hoverable sparkline canvases */
+.sparkline-tile-canvas,
+.dc-tile-canvas { cursor: crosshair; }
+
 /* ── Deep Cuts v2 ────────────────────────────────────────── */
 .deep-cuts-header {
   margin-bottom: var(--ed-space-5);
@@ -807,12 +933,16 @@ a {
 .dc-curiosity-name {
   margin: 0;
   font-family: var(--ed-font-display);
-  font-size: clamp(2rem, 3.5vw, 3rem);
-  line-height: 0.92;
+  font-size: clamp(1.5rem, 2.8vw, 2.3rem);
+  line-height: 0.95;
   letter-spacing: -0.04em;
   flex-grow: 1;
   display: flex;
   align-items: flex-end;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  max-width: 100%;
 }
 
 .dc-curiosity-copy {
@@ -892,31 +1022,60 @@ a {
   font-style: italic;
 }
 
-/* Discovery chip: USDA tracks it, we don't have sparklines */
+/* Discovery chip: USDA tracks it, but no monthly time-series exists.
+   Deliberately styled as a different kind of object than a data tile —
+   a flat-baseline "also tracked" card, not a broken chart. */
 .dc-chip {
-  padding: var(--ed-space-3) var(--ed-space-3);
-  border: var(--ed-line);
+  position: relative;
+  padding: var(--ed-space-3) var(--ed-space-4);
+  border: 1px dashed color-mix(in srgb, var(--ed-ink) 22%, transparent);
   border-radius: 3px;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  background: transparent;
+  gap: 0.35rem;
+  min-height: 120px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--ed-ink) 3%, transparent),
+    color-mix(in srgb, var(--ed-ink) 3%, transparent) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+.dc-chip-eyebrow {
+  margin: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.4;
 }
 
 .dc-chip-name {
   margin: 0;
-  font-size: 0.92rem;
+  font-family: var(--ed-font-display);
+  font-size: 1.2rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 
-.dc-chip-tag {
+/* Flat baseline motif: a quiet ruled line standing in for "no chart" */
+.dc-chip-baseline {
+  display: block;
+  margin-top: auto;
+  height: 0;
+  border-bottom: 1.5px solid color-mix(in srgb, var(--ed-ink) 18%, transparent);
+}
+
+.dc-chip-note {
   margin: 0;
   font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  opacity: 0.35;
+  opacity: 0.32;
 }
 
 /* Grand Ledger */
@@ -935,24 +1094,48 @@ a {
 
 .dc-ledger-item {
   margin: 0;
-  font-size: 0.88rem;
+  font-family: var(--ed-font-display);
+  font-size: 1rem;
   font-weight: 500;
-  padding: 0.4rem 0;
+  letter-spacing: -0.01em;
+  padding: 0.45rem 0;
   border-bottom: 1px solid color-mix(in srgb, var(--ed-ink) 8%, transparent);
   break-inside: avoid;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--ed-space-2);
 }
 
-.dc-ledger-item-tag {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  opacity: 0.3;
-  flex-shrink: 0;
+/* ── Source chip NASS link ───────────────────────────────── */
+.source-nass-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ed-ink) 28%, transparent);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.source-nass-link:hover,
+.source-nass-link:focus-visible {
+  color: var(--em-coral);
+  border-bottom-color: var(--em-coral);
+}
+
+/* ── Site footer ─────────────────────────────────────────── */
+.site-footer {
+  margin-top: var(--ed-space-5);
+  padding: var(--ed-space-5) 0 var(--ed-space-3);
+  border-top: var(--ed-line);
+  display: flex;
+  justify-content: center;
+}
+
+.site-footer-mark {
+  font-family: var(--ed-font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.34em;
+  text-transform: lowercase;
+  opacity: 0.42;
+  padding-left: 0.34em;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

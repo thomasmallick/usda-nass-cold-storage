@@ -547,7 +547,7 @@ function renderHero(data) {
   );
 
   document.getElementById("hero-observation-date").textContent =
-    `Observed ${new Date(latest.observationDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+    `Reporting on ${new Date(latest.observationDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}`;
   document.getElementById("hero-mom").textContent = formatPercent(mom);
   document.getElementById("hero-mom").className = `delta ${mom >= 0 ? "delta--up" : "delta--down"}`;
   document.getElementById("hero-yoy").textContent = formatPercent(yoy);
@@ -579,7 +579,10 @@ function renderHero(data) {
   document.getElementById("poultry-mom").className = `delta ${poultryMom >= 0 ? "delta--up" : "delta--down"}`;
 
   // Release metadata
-  document.getElementById("release-date").textContent = latest.releaseDate || data.meta.updated;
+  const publishIso = latest.releaseDate || data.meta.updated;
+  document.getElementById("release-date").textContent = publishIso
+    ? new Date(publishIso + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
+    : "—";
   document.getElementById("next-release").textContent = estimatedNextReleaseLabel();
   const reportLink = document.getElementById("report-link");
   if (reportLink && latest.reportUrl) reportLink.href = latest.reportUrl;
@@ -704,6 +707,76 @@ function bindChartHover(canvas, values, dates, opts) {
   canvas._hoverCleanup = () => {
     canvas.removeEventListener("mousemove", onMove);
     canvas.removeEventListener("mouseleave", onLeave);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shared floating sparkline tooltip (reused by all small tiles)
+// ---------------------------------------------------------------------------
+let _sparkTooltip = null;
+function getSparkTooltip() {
+  if (_sparkTooltip) return _sparkTooltip;
+  const el = document.createElement("div");
+  el.className = "spark-tooltip";
+  el.innerHTML = `<p class="spark-tooltip-date"></p><p class="spark-tooltip-value"></p>`;
+  document.body.appendChild(el);
+  _sparkTooltip = el;
+  return el;
+}
+
+/**
+ * Attach point-in-time hover to any canvas sparkline.
+ * Redraws via drawSparkline with hoverIdx and follows the cursor with a single
+ * shared floating tooltip. Stores canvas._hoverCleanup so re-renders don't stack.
+ */
+function attachSparklineHover(canvas, values, dates, opts = {}) {
+  if (!canvas || !values || values.length < 2) return;
+  if (canvas._hoverCleanup) canvas._hoverCleanup();
+
+  const tooltip = getSparkTooltip();
+  const dateEl = tooltip.querySelector(".spark-tooltip-date");
+  const valueEl = tooltip.querySelector(".spark-tooltip-value");
+  const padding = opts.padding ?? 10;
+  const n = values.length;
+
+  function getIdx(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const step = (rect.width - padding * 2) / (n - 1);
+    return Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+  }
+
+  function onMove(e) {
+    const idx = getIdx(e.clientX);
+    drawSparkline(canvas, values, { ...opts, hoverIdx: idx });
+
+    const d = new Date(dates[idx] + "T12:00:00Z");
+    dateEl.textContent = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    valueEl.textContent = formatCompact.format(values[idx] * 1000) + " lb";
+
+    // Position: above-right of cursor, flip near viewport edges
+    tooltip.classList.add("spark-tooltip--visible");
+    const tw = tooltip.offsetWidth;
+    const th = tooltip.offsetHeight;
+    let left = e.clientX + 14;
+    let top = e.clientY - th - 12;
+    if (left + tw > window.innerWidth - 8) left = e.clientX - tw - 14;
+    if (top < 8) top = e.clientY + 16;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function onLeave() {
+    drawSparkline(canvas, values, opts);
+    tooltip.classList.remove("spark-tooltip--visible");
+  }
+
+  canvas.addEventListener("mousemove", onMove);
+  canvas.addEventListener("mouseleave", onLeave);
+  canvas._hoverCleanup = () => {
+    canvas.removeEventListener("mousemove", onMove);
+    canvas.removeEventListener("mouseleave", onLeave);
+    tooltip.classList.remove("spark-tooltip--visible");
   };
 }
 
@@ -860,7 +933,10 @@ function renderThroughTime(data, filter = "all") {
       const colors = TT_COLORS[group] || TT_COLORS.protein;
       const series = buildSparklineSeries(data.archive, key, 60);
       if (series.length >= 2) {
-        drawSparkline(canvas, series, { lineColor: colors.line, fillOpacity: 0.15, lineWidth: 1.5 });
+        const dates = data.archive.snapshots.slice(-series.length).map((s) => s.observationDate);
+        const opts = { lineColor: colors.line, fillOpacity: 0.15, lineWidth: 1.5 };
+        drawSparkline(canvas, series, opts);
+        attachSparklineHover(canvas, series, dates, opts);
       }
     });
   });
@@ -909,7 +985,12 @@ function renderDcTrackedTile(archive, key) {
 }
 
 function renderDcDiscoveryChip(name) {
-  return `<div class="dc-chip"><p class="dc-chip-name">${name}</p><p class="dc-chip-tag">USDA tracked</p></div>`;
+  return `<div class="dc-chip" title="USDA tracks ${name}; no monthly series shown here">
+      <p class="dc-chip-eyebrow">Also tracked</p>
+      <p class="dc-chip-name">${name}</p>
+      <span class="dc-chip-baseline" aria-hidden="true"></span>
+      <p class="dc-chip-note">No monthly series</p>
+    </div>`;
 }
 
 function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
@@ -925,7 +1006,10 @@ function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
       if (!canvas) return;
       const series = buildSparklineSeries(archive, key, 60);
       if (series.length >= 2) {
-        drawSparkline(canvas, series, { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5, padding: 8 });
+        const dates = archive.snapshots.slice(-series.length).map((s) => s.observationDate);
+        const opts = { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5, padding: 8 };
+        drawSparkline(canvas, series, opts);
+        attachSparklineHover(canvas, series, dates, opts);
       }
     });
   });
@@ -955,7 +1039,7 @@ function renderDeepCuts(data) {
   const ledger = document.getElementById("dc-ledger");
   if (ledger) {
     ledger.innerHTML = DC_LEDGER_ITEMS.map((name) =>
-      `<p class="dc-ledger-item"><span>${name}</span><span class="dc-ledger-item-tag">USDA</span></p>`
+      `<p class="dc-ledger-item">${name}</p>`
     ).join("");
   }
 }

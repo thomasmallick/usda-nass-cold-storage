@@ -18,11 +18,7 @@
         <div class="topbar-meta">
           <div class="meta-chip">
             <span class="meta-label">Source</span>
-            <strong>USDA NASS</strong>
-          </div>
-          <div class="meta-chip">
-            <span class="meta-label">Cadence</span>
-            <strong>Monthly</strong>
+            <strong><a class="source-nass-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">USDA NASS</a></strong>
           </div>
         </div>
       </header>
@@ -128,11 +124,11 @@
             <p class="body-copy narrative-copy" id="narrative-copy">Loading…</p>
             <div class="quiet-metrics">
               <div>
-                <p class="mini-label">Latest release</p>
+                <p class="mini-label">Report published</p>
                 <p id="release-date">—</p>
               </div>
               <div>
-                <p class="mini-label">Next release est.</p>
+                <p class="mini-label">Next report est.</p>
                 <p id="next-release">—</p>
               </div>
             </div>
@@ -224,6 +220,11 @@
           <button class="filter-pill" data-tt-filter="produce" type="button">Produce</button>
           <button class="filter-pill" data-tt-filter="protein" type="button">Meat + poultry</button>
         </div>
+        <div class="tt-legend" aria-label="Tile color key">
+          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--dairy"></span>Dairy</span>
+          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--produce"></span>Produce</span>
+          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--protein"></span>Meat + poultry</span>
+        </div>
         <div class="through-time-grid" id="through-time-grid"></div>
       </div>
 
@@ -263,11 +264,15 @@
         </section>
 
         <section class="dc-section">
-          <h3 class="category-banner">Grains, Oilseeds &amp; Everything Else</h3>
+          <h3 class="category-banner">Grains, Seed Oils, &amp; Everything Else</h3>
           <p class="dc-ledger-intro">USDA also tracks cold storage for grains, oilseeds, and agricultural commodities you'd never expect to see in a frozen food report.</p>
           <div class="dc-ledger" id="dc-ledger"></div>
         </section>
       </div>
+
+      <footer class="site-footer">
+        <span class="site-footer-mark">tommytommytommy©</span>
+      </footer>
 
     </div>
 
