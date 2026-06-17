@@ -1156,7 +1156,7 @@ a {
   .compare-bars { min-height: 80px; }
 
   .ranking-row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
   }
 
   .ranking-bar-shell { display: none; }
@@ -1166,4 +1166,28 @@ a {
   .dc-curiosities-grid { grid-template-columns: 1fr; }
   .dc-mixed-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .dc-ledger { column-count: 2; }
+}
+
+@media (max-width: 480px) {
+  .editorial-dashboard-shell { padding: var(--ed-space-2); }
+
+  .tab-bar, .filter-rail, .through-time-filter-rail {
+    gap: var(--ed-space-1);
+  }
+
+  .tab-pill, .filter-pill {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+  }
+
+  .hero-number { font-size: clamp(3.2rem, 20vw, 5.5rem); }
+
+  .hero-subtitle { font-size: 0.92rem; }
+
+  .panel-title { font-size: clamp(1.2rem, 5vw, 1.8rem); }
+
+  .dc-mixed-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .dc-ledger { column-count: 1; }
+
+  .compare-bars { grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: 64px; }
 }
