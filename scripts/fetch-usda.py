@@ -188,13 +188,27 @@ COMMODITY_MAP: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 # API helpers
 # ---------------------------------------------------------------------------
+_API_KEY = ""
+
+
 def get_api_key() -> str:
+    global _API_KEY
     key = os.environ.get("USDA_API_KEY", "").strip()
     if not key:
         print("ERROR: USDA_API_KEY environment variable not set.", file=sys.stderr)
         print("  Register free at: https://quickstats.nass.usda.gov/api", file=sys.stderr)
         sys.exit(1)
+    _API_KEY = key
     return key
+
+
+def redact(text: object) -> str:
+    """Strip the API key from any string before it reaches logs.
+
+    requests exception messages embed the full request URL, which carries
+    the key as a query parameter."""
+    s = str(text)
+    return s.replace(_API_KEY, "***") if _API_KEY else s
 
 
 def api_get(params: dict, retries: int = 4) -> dict:
@@ -221,7 +235,7 @@ def api_get(params: dict, retries: int = 4) -> dict:
         except requests.RequestException as exc:
             if attempt < retries - 1:
                 wait = 2 ** attempt
-                print(f"  Retry {attempt + 1}/{retries - 1} after {wait}s ({exc})")
+                print(f"  Retry {attempt + 1}/{retries - 1} after {wait}s ({redact(exc)})")
                 time.sleep(wait)
             else:
                 raise
@@ -244,7 +258,7 @@ def fetch_short_desc(api_key: str, short_desc: str, year: int, month: int) -> in
         print(f"\n    WARN [{short_desc[:50]}] {year}-{month:02d}: HTTP {exc.response.status_code}")
         return None
     except requests.RequestException as exc:
-        print(f"\n    WARN [{short_desc[:50]}] {year}-{month:02d}: network error ({exc})")
+        print(f"\n    WARN [{short_desc[:50]}] {year}-{month:02d}: network error ({redact(exc)})")
         return None
 
     records = data.get("data", [])
@@ -326,7 +340,12 @@ def explore_commodity(api_key: str, commodity_desc: str) -> None:
     try:
         data = api_get(params)
     except requests.exceptions.HTTPError as exc:
-        print(f"HTTP {exc.response.status_code}: {exc.response.text[:300]}")
+        code = exc.response.status_code if exc.response is not None else "?"
+        body = exc.response.text[:300] if exc.response is not None else ""
+        print(f"HTTP {code}: {redact(body)}")
+        return
+    except requests.RequestException as exc:
+        print(f"Network error: {redact(exc)}")
         return
 
     records = data.get("data", [])

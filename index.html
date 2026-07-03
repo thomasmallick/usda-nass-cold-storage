@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>US Cold Storage — USDA NASS</title>
     <meta name="description" content="Monthly front-page view of US frozen food reserves, re-cut from USDA NASS cold storage data." />
+    <meta name="theme-color" content="#f4ebdc" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What America keeps frozen." />
+    <meta property="og:description" content="Every frozen pound the US warehouses right now — butter, beef, broccoli, and everything in between. Monthly USDA NASS cold storage data." />
+    <meta property="og:image" content="./assets/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="What America keeps frozen." />
+    <meta name="twitter:description" content="Every frozen pound the US warehouses right now, from USDA NASS cold storage data." />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -27,9 +36,9 @@
            TAB NAVIGATION
       ════════════════════════════════════════════ -->
       <nav class="tab-bar" aria-label="Dashboard views">
-        <button class="tab-pill tab-pill--active" data-tab="overview" type="button">Overview</button>
-        <button class="tab-pill" data-tab="through-time" type="button">Through Time</button>
-        <button class="tab-pill" data-tab="deep-cuts" type="button">Deep Cuts</button>
+        <button class="tab-pill tab-pill--active" data-tab="overview" type="button" aria-pressed="true">Overview</button>
+        <button class="tab-pill" data-tab="through-time" type="button" aria-pressed="false">Through Time</button>
+        <button class="tab-pill" data-tab="deep-cuts" type="button" aria-pressed="false">Deep Cuts</button>
       </nav>
 
       <!-- ═══════════════════════════════════════════
@@ -38,10 +47,10 @@
       <div class="view-section" id="view-overview">
 
         <section class="filter-rail" aria-label="Category filters">
-          <button class="filter-pill is-active" data-filter="all" type="button">All storage</button>
-          <button class="filter-pill" data-filter="dairy" type="button">Dairy</button>
-          <button class="filter-pill" data-filter="produce" type="button">Produce</button>
-          <button class="filter-pill" data-filter="protein" type="button">Meat + poultry</button>
+          <button class="filter-pill is-active" data-filter="all" type="button" aria-pressed="true">All storage</button>
+          <button class="filter-pill" data-filter="dairy" type="button" aria-pressed="false">Dairy</button>
+          <button class="filter-pill" data-filter="produce" type="button" aria-pressed="false">Produce</button>
+          <button class="filter-pill" data-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
         </section>
 
         <main class="editorial-dashboard-grid">
@@ -215,10 +224,10 @@
           <p class="view-subtitle">Each tile shows 60 months of cold storage volumes. Peaks and valleys reveal seasonal rhythms, supply shocks, and the slow drift of American eating habits.</p>
         </div>
         <div class="through-time-filter-rail">
-          <button class="filter-pill is-active" data-tt-filter="all" type="button">All</button>
-          <button class="filter-pill" data-tt-filter="dairy" type="button">Dairy</button>
-          <button class="filter-pill" data-tt-filter="produce" type="button">Produce</button>
-          <button class="filter-pill" data-tt-filter="protein" type="button">Meat + poultry</button>
+          <button class="filter-pill is-active" data-tt-filter="all" type="button" aria-pressed="true">All</button>
+          <button class="filter-pill" data-tt-filter="dairy" type="button" aria-pressed="false">Dairy</button>
+          <button class="filter-pill" data-tt-filter="produce" type="button" aria-pressed="false">Produce</button>
+          <button class="filter-pill" data-tt-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
         </div>
         <div class="tt-legend" aria-label="Tile color key">
           <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--dairy"></span>Dairy</span>
@@ -235,7 +244,7 @@
         <div class="deep-cuts-header">
           <p class="eyebrow">The full inventory · 70+ commodities</p>
           <h2 class="view-title">The deep freeze.</h2>
-          <p class="view-subtitle">Everything the US stores cold — from 800M lb of chicken to things you had no idea anyone was tracking.</p>
+          <p class="view-subtitle">Everything the US stores cold — from three-quarters of a billion pounds of chicken to things you had no idea anyone was tracking.</p>
         </div>
 
         <section class="dc-section">

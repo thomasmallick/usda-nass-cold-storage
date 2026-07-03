@@ -238,6 +238,15 @@ const formatCompact = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+// Escape any string interpolated into innerHTML. Labels are currently
+// hardcoded, but archive JSON keys can fall through as labels — keep every
+// data-derived string inert.
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
 function formatPounds(thousandLb) {
   return `${formatCompact.format(thousandLb * 1000)} lb`;
 }
@@ -411,8 +420,11 @@ function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.
   if (!values || values.length < 2) return;
 
   const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.offsetWidth || 320;
-  const cssH = canvas.offsetHeight || 80;
+  // Measure the wrapper, not the canvas: the canvas carries inline width/height
+  // from the previous draw, which would freeze it at a stale size after resize.
+  const wrap = canvas.parentElement;
+  const cssW = (wrap ? wrap.clientWidth : canvas.offsetWidth) || 320;
+  const cssH = (wrap ? wrap.clientHeight : canvas.offsetHeight) || 80;
   canvas.width = cssW * dpr;
   canvas.height = cssH * dpr;
   canvas.style.width = cssW + "px";
@@ -585,7 +597,18 @@ function renderHero(data) {
     : "—";
   document.getElementById("next-release").textContent = estimatedNextReleaseLabel();
   const reportLink = document.getElementById("report-link");
-  if (reportLink && latest.reportUrl) reportLink.href = latest.reportUrl;
+  if (reportLink && latest.reportUrl) {
+    // Only accept https USDA links from the data file — a poisoned archive
+    // must not be able to plant a javascript: or off-site href.
+    try {
+      const url = new URL(latest.reportUrl);
+      if (url.protocol === "https:" && (url.hostname === "usda.gov" || url.hostname.endsWith(".usda.gov"))) {
+        reportLink.href = url.href;
+      }
+    } catch {
+      /* malformed URL — keep the hardcoded fallback href */
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -650,10 +673,14 @@ function renderChartStrip(data, filter) {
 
   const catDef = categoryDefinitions[filter];
   if (label) label.textContent = catDef?.title || "Total cold storage trend";
-  if (monthCount) monthCount.textContent = `${values.length} monthly snapshots`;
 
   const snapshots = data.archive.snapshots.slice(-values.length);
   const dates = snapshots.map((s) => s.observationDate);
+
+  if (monthCount && dates.length) {
+    const fmt = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+    monthCount.textContent = `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])} · ${values.length} months`;
+  }
 
   const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2 };
   drawSparkline(canvas, values, opts);
@@ -702,11 +729,18 @@ function bindChartHover(canvas, values, dates, opts) {
     tooltip.classList.remove("chart-tooltip--visible");
   }
 
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseleave", onLeave);
+  // Touch: tap or drag scrubs the chart and the readout persists; it clears
+  // when a scroll takes over (pointercancel) or the pointer leaves.
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerdown", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
+  canvas.addEventListener("pointercancel", onLeave);
+  canvas._redraw = () => drawSparkline(canvas, values, opts);
   canvas._hoverCleanup = () => {
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseleave", onLeave);
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerdown", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
+    canvas.removeEventListener("pointercancel", onLeave);
   };
 }
 
@@ -771,14 +805,33 @@ function attachSparklineHover(canvas, values, dates, opts = {}) {
     tooltip.classList.remove("spark-tooltip--visible");
   }
 
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseleave", onLeave);
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerdown", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
+  canvas.addEventListener("pointercancel", onLeave);
+  canvas._redraw = () => drawSparkline(canvas, values, opts);
   canvas._hoverCleanup = () => {
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseleave", onLeave);
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerdown", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
+    canvas.removeEventListener("pointercancel", onLeave);
     tooltip.classList.remove("spark-tooltip--visible");
   };
 }
+
+// Redraw every visible sparkline at its current container size. Called on
+// window resize (orientation change) and when a tab becomes visible again.
+function redrawVisibleCanvases() {
+  document.querySelectorAll("canvas").forEach((canvas) => {
+    if (canvas._redraw && canvas.offsetParent !== null) canvas._redraw();
+  });
+}
+
+let _resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redrawVisibleCanvases, 150);
+});
 
 // ---------------------------------------------------------------------------
 // Render: comparison grid
@@ -821,10 +874,12 @@ function renderCompareGrid(data, filter) {
       const bars = entries
         .map((entry) => {
           const value = item.values[entry.key];
-          const height = Math.max(16, (value / maxAcrossSeries) * 100);
+          const height = Math.max(4, (value / maxAcrossSeries) * 100);
           return `
             <div class="compare-bar-wrap">
-              <div class="compare-bar compare-bar--${entry.className}" style="height:${height}%"></div>
+              <div class="compare-bar-zone">
+                <div class="compare-bar compare-bar--${entry.className}" style="height:${height}%"></div>
+              </div>
               <div class="compare-caption">
                 <strong>${entry.label}</strong>
                 <span>${formatCompact.format(value * 1000)} lb</span>
@@ -838,7 +893,7 @@ function renderCompareGrid(data, filter) {
       return `
         <article class="compare-row">
           <div class="compare-head">
-            <p class="compare-name">${item.label}</p>
+            <p class="compare-name">${escapeHtml(item.label)}</p>
             <p class="compare-values">${formatPercent(delta)} vs last month</p>
           </div>
           <div class="compare-bars">${bars}</div>
@@ -870,7 +925,7 @@ function renderRanking(data, filter) {
       const deltaClass = item.mom >= 0 ? "delta--up" : "delta--down";
       return `
         <article class="ranking-row">
-          <p class="ranking-name">${item.label}</p>
+          <p class="ranking-name">${escapeHtml(item.label)}</p>
           <div class="ranking-bar-shell">
             <div class="ranking-bar-fill" style="width:${width}%"></div>
           </div>
@@ -914,11 +969,11 @@ function renderThroughTime(data, filter = "all") {
     return `
       <div class="sparkline-tile sparkline-tile--${group}">
         <div class="sparkline-tile-top">
-          <p class="sparkline-tile-label">${label}</p>
+          <p class="sparkline-tile-label">${escapeHtml(label)}</p>
           <p class="sparkline-tile-value">${formatCompact.format(latest * 1000)}</p>
         </div>
         <div class="sparkline-tile-canvas-wrap">
-          <canvas class="sparkline-tile-canvas" id="${canvasId}" aria-label="${label} 5-year trend"></canvas>
+          <canvas class="sparkline-tile-canvas" id="${canvasId}" aria-label="${escapeHtml(label)} 5-year trend"></canvas>
         </div>
         ${yoyText ? `<p class="sparkline-tile-yoy">${yoyText}</p>` : ""}
       </div>`;
@@ -948,7 +1003,11 @@ function bindThroughTimeFilters(data) {
 
   function update(next) {
     active = next;
-    pills.forEach((p) => p.classList.toggle("is-active", p.dataset.ttFilter === next));
+    pills.forEach((p) => {
+      const isActive = p.dataset.ttFilter === next;
+      p.classList.toggle("is-active", isActive);
+      p.setAttribute("aria-pressed", String(isActive));
+    });
     renderThroughTime(data, next);
   }
 
@@ -972,7 +1031,7 @@ function renderDcTrackedTile(archive, key) {
   return `
     <div class="dc-tile">
       <div class="dc-tile-top">
-        <p class="dc-tile-label">${label}</p>
+        <p class="dc-tile-label">${escapeHtml(label)}</p>
         ${hasData
           ? `<p class="dc-tile-value">${formatCompact.format(latest * 1000)}<span class="dc-tile-unit"> lb</span></p>`
           : `<p class="dc-tile-value" style="opacity:.3">—</p>`}
@@ -980,14 +1039,14 @@ function renderDcTrackedTile(archive, key) {
       ${hasData && series.length >= 2
         ? `<div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}"></canvas></div>`
         : `<p class="dc-tile-no-data">No data for latest month</p>`}
-      ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
+      ${insight ? `<span class="insight-badge">${escapeHtml(insight)}</span>` : ""}
     </div>`;
 }
 
 function renderDcDiscoveryChip(name) {
-  return `<div class="dc-chip" title="USDA tracks ${name}; no monthly series shown here">
+  return `<div class="dc-chip" title="USDA tracks ${escapeHtml(name)}; no monthly series shown here">
       <p class="dc-chip-eyebrow">Also tracked</p>
-      <p class="dc-chip-name">${name}</p>
+      <p class="dc-chip-name">${escapeHtml(name)}</p>
       <span class="dc-chip-baseline" aria-hidden="true"></span>
       <p class="dc-chip-note">No monthly series</p>
     </div>`;
@@ -996,12 +1055,22 @@ function renderDcDiscoveryChip(name) {
 function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  // A tracked commodity with no archived values yet renders as a discovery
+  // chip instead of a dead tile — it upgrades itself once the data lands.
+  const hasSeries = (key) => {
+    const series = buildSparklineSeries(archive, key, 60);
+    return (series[series.length - 1] || 0) > 0 && series.length >= 2;
+  };
+  const withData = tracked.filter(hasSeries);
+  const pendingNames = tracked
+    .filter((key) => !hasSeries(key))
+    .map((key) => DEEP_CUT_LABELS[key] || COMMODITY_LABELS[key] || key);
   container.innerHTML =
-    tracked.map((key) => renderDcTrackedTile(archive, key)).join("") +
-    discovery.map((name) => renderDcDiscoveryChip(name)).join("");
+    withData.map((key) => renderDcTrackedTile(archive, key)).join("") +
+    [...pendingNames, ...discovery].map((name) => renderDcDiscoveryChip(name)).join("");
   // Draw sparklines after paint
   requestAnimationFrame(() => {
-    tracked.forEach((key) => {
+    withData.forEach((key) => {
       const canvas = document.getElementById(`dc-canvas-${key}`);
       if (!canvas) return;
       const series = buildSparklineSeries(archive, key, 60);
@@ -1054,7 +1123,14 @@ function bindTabRouter(data) {
   let dcInitialized = false;
 
   function activate(tabId) {
-    tabs.forEach((t) => t.classList.toggle("tab-pill--active", t.dataset.tab === tabId));
+    // Unknown hash (typo, stale link) falls back to the overview instead of a blank page.
+    if (!document.getElementById(`view-${tabId}`)) tabId = "overview";
+
+    tabs.forEach((t) => {
+      const active = t.dataset.tab === tabId;
+      t.classList.toggle("tab-pill--active", active);
+      t.setAttribute("aria-pressed", String(active));
+    });
     views.forEach((v) => {
       const matches = v.id === `view-${tabId}`;
       v.classList.toggle("view-section--hidden", !matches);
@@ -1068,6 +1144,9 @@ function bindTabRouter(data) {
       renderDeepCuts(data);
       dcInitialized = true;
     }
+
+    // Canvases drawn while this view was hidden (or before a resize) are stale.
+    requestAnimationFrame(redrawVisibleCanvases);
   }
 
   tabs.forEach((tab) => {
@@ -1091,13 +1170,18 @@ function bindTabRouter(data) {
 // Filter binding (drives chart strip + narrative + comparison + ranking)
 // ---------------------------------------------------------------------------
 function bindFilters(data) {
-  const pills = document.querySelectorAll(".filter-pill");
+  // Scope to overview pills only — the Through Time rail uses data-tt-filter
+  // and has its own binder; grabbing it here crashed renders with an
+  // undefined category and clobbered its active state.
+  const pills = document.querySelectorAll(".filter-pill[data-filter]");
   let active = "all";
 
   function update(next) {
     active = next;
     pills.forEach((pill) => {
-      pill.classList.toggle("is-active", pill.dataset.filter === next);
+      const isActive = pill.dataset.filter === next;
+      pill.classList.toggle("is-active", isActive);
+      pill.setAttribute("aria-pressed", String(isActive));
     });
     renderCompareGrid(data, next);
     renderRanking(data, next);
@@ -1128,6 +1212,12 @@ async function init() {
 
 init().catch((error) => {
   console.error("Dashboard load failed", error);
+  const note = document.getElementById("hero-observation-date");
+  if (note) note.textContent = "Data failed to load";
+  const hero = document.getElementById("hero-value");
+  if (hero) hero.textContent = "—";
+  const narrative = document.getElementById("narrative-copy");
+  if (narrative) narrative.textContent = "The cold storage archive could not be loaded. Check your connection and refresh to try again.";
   const grid = document.getElementById("compare-grid");
-  if (grid) grid.innerHTML = `<p style="padding:1rem">Could not load the cold storage archive.</p>`;
+  if (grid) grid.innerHTML = `<p style="padding:1rem 0">Could not load the cold storage archive.</p>`;
 });

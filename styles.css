@@ -454,18 +454,26 @@ a {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   align-items: flex-end;
-  min-height: 96px;
 }
 
 .compare-bar-wrap {
   display: grid;
   gap: 0.35rem;
+}
+
+/* Fixed-height zone so the bar's percentage height resolves against a
+   definite size — without it every bar collapses to its min-height and the
+   chart encodes nothing. */
+.compare-bar-zone {
+  height: 88px;
+  display: flex;
   align-items: flex-end;
 }
 
 .compare-bar {
+  width: 100%;
   border-radius: 999px 999px 0 0;
-  min-height: 18px;
+  min-height: 4px;
   transform-origin: bottom;
   animation: riseIn 650ms ease both;
 }
@@ -877,6 +885,11 @@ a {
 .sparkline-tile-canvas,
 .dc-tile-canvas { cursor: crosshair; }
 
+/* Touch: horizontal drags scrub the chart, vertical drags still scroll */
+.trend-canvas,
+.sparkline-tile-canvas,
+.dc-tile-canvas { touch-action: pan-y; }
+
 /* ── Deep Cuts v2 ────────────────────────────────────────── */
 .deep-cuts-header {
   margin-bottom: var(--ed-space-5);
@@ -1147,13 +1160,14 @@ a {
     flex-direction: column;
   }
 
-  .editorial-dashboard-grid { grid-template-columns: 1fr; }
+  /* minmax(0, …) so an oversized canvas can never prop the column open */
+  .editorial-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
 
   [data-span] { grid-column: span 1 !important; min-height: auto; }
 
   .hero-number { font-size: clamp(4rem, 18vw, 7rem); }
 
-  .compare-bars { min-height: 80px; }
+  .compare-bar-zone { height: 68px; }
 
   .ranking-row {
     grid-template-columns: 1fr auto auto;
@@ -1189,5 +1203,5 @@ a {
   .dc-mixed-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .dc-ledger { column-count: 1; }
 
-  .compare-bars { grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: 64px; }
+  .compare-bar-zone { height: 56px; }
 }
