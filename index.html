@@ -29,9 +29,6 @@
           <h1 class="page-title">What America keeps frozen.</h1>
         </div>
         <div class="topbar-meta">
-          <button class="unit-toggle" id="unit-toggle" type="button" aria-pressed="false" title="Show every number as what it means for one person">
-            ≈ per American
-          </button>
           <div class="meta-chip">
             <span class="meta-label">Source</span>
             <strong><a class="source-nass-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">USDA NASS</a></strong>
@@ -71,10 +68,11 @@
               <p class="mini-note" id="hero-observation-date">Loading…</p>
             </div>
             <div class="hero-copy">
-              <div class="hero-number-row">
+              <div class="hero-number-row" id="hero-number-row" role="button" tabindex="0" aria-pressed="false" title="Toggle the per-American view">
                 <span class="hero-number" id="hero-value">—</span>
                 <span class="hero-unit" id="hero-unit">lb</span>
               </div>
+              <p class="hero-tap-hint" id="hero-tap-hint">Click the number to see your share of it.</p>
               <p class="hero-subtitle">
                 The 15 headline categories USDA reports each month — butter, beef, broccoli, and everything in between.
               </p>
@@ -191,7 +189,7 @@
               </div>
             </div>
             <div class="compare-grid" id="compare-grid"></div>
-            <p class="attribution">Bars zoom to each row's own range to make the moves visible.</p>
+            <p class="attribution">Bars scale from zero — the % badge carries the story.</p>
           </section>
 
           <section class="editorial-panel editorial-panel--paper source-panel" data-span="source">
@@ -206,7 +204,7 @@
               <a class="source-link" id="report-link" href="https://www.nass.usda.gov/Publications/Todays_Reports/reports/cost0226.pdf" target="_blank" rel="noreferrer">Open official report ↗</a>
               <a class="source-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">Survey guide ↗</a>
             </div>
-            <p class="attribution">Uses USDA NASS data. Not endorsed or certified by NASS.</p>
+            <p class="attribution">USDA NASS data.</p>
           </section>
 
           <!-- ROW 4 — Full-width ranking table -->

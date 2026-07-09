@@ -104,33 +104,45 @@ a {
 }
 
 /* ── Per-American unit toggle ────────────────────────────── */
-.unit-toggle {
-  appearance: none;
-  border: var(--ed-line);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.44);
-  backdrop-filter: blur(8px);
-  color: var(--ed-ink);
-  padding: 0.65rem 1rem;
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
+/* The hero number IS the per-American toggle */
+.hero-number-row {
   cursor: pointer;
-  transition:
-    background-color 180ms var(--ed-spring),
-    color 180ms var(--ed-spring),
-    transform 200ms var(--ed-spring);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.unit-toggle:hover,
-.unit-toggle:focus-visible {
-  transform: translateY(-2px);
+.hero-number-row .hero-number {
+  border-bottom: 0.045em dashed color-mix(in srgb, var(--ed-ink) 32%, transparent);
+  transition: border-color 180ms ease;
 }
 
-.unit-toggle.is-active {
-  background: var(--em-cobalt);
-  border-color: var(--em-cobalt);
-  color: var(--ed-paper-2);
+.hero-number-row:hover .hero-number,
+.hero-number-row:focus-visible .hero-number,
+.hero-number-row.is-active .hero-number {
+  border-bottom-color: var(--em-coral);
+}
+
+.hero-number-row:focus-visible {
+  outline: 2px solid var(--em-cobalt);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+.hero-tap-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.5;
+}
+
+/* Tiny x-axis range under tile sparklines */
+.spark-range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  opacity: 0.45;
 }
 
 /* ── Filter rail ─────────────────────────────────────────── */
@@ -425,6 +437,7 @@ a {
   position: relative;
   display: flex;
   align-items: center;
+  transition: transform 220ms var(--ed-spring), filter 200ms ease, box-shadow 200ms ease;
   border-radius: 1.2rem 2rem 1.1rem 1.8rem;
   min-height: 2.4rem;
   padding: 0.8rem 1rem;
@@ -470,6 +483,13 @@ a {
 .cave-layer-label > span:last-child {
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.cave-layer:hover {
+  animation: none;
+  transform: translateX(8px);
+  filter: brightness(1.07);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.22);
 }
 
 /* ── Compare grid ────────────────────────────────────────── */
@@ -529,6 +549,7 @@ a {
   min-height: 4px;
   transform-origin: bottom;
   animation: riseIn 650ms ease both;
+  transition: transform 200ms var(--ed-spring), filter 200ms ease;
 }
 
 .compare-bar--year-ago  { background: color-mix(in srgb, var(--em-cobalt) 22%, white); }
@@ -573,6 +594,18 @@ a {
   display: grid;
   gap: 0.75rem;
 }
+
+/* One shared column grid for all rows — otherwise each row's auto columns
+   size to their own content and the bars start at different x positions. */
+@supports (grid-template-columns: subgrid) {
+  .ranking-list { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto; }
+  .ranking-list > .ranking-row {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+  }
+}
+
+.ranking-value { justify-self: end; }
 
 .ranking-row {
   display: grid;
@@ -639,7 +672,6 @@ a {
 .dc-tile,
 .dc-chip,
 .dc-curiosity-card,
-.compare-row,
 .ranking-row {
   transition:
     transform 200ms var(--ed-spring),
@@ -651,10 +683,17 @@ a {
 .dc-tile:hover,
 .dc-chip:hover,
 .dc-curiosity-card:hover,
-.compare-row:hover,
 .ranking-row:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(17, 17, 17, 0.1);
+}
+
+/* Compare panel: only the bar under the cursor reacts, not the whole row */
+.compare-row[role="button"] { cursor: pointer; }
+
+.compare-bar-wrap:hover .compare-bar {
+  transform: translateY(-4px);
+  filter: brightness(1.05);
 }
 
 @media (prefers-reduced-motion: reduce) {

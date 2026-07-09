@@ -252,7 +252,7 @@ const GRAND_TOTAL_KEYS = [
 const categoryDefinitions = {
   all: {
     title: "Total cold storage — all categories",
-    rankingNote: "Base commodities only — no double counting",
+    rankingNote: "Sorted by latest storage volume",
     aggregateKeys: GRAND_TOTAL_KEYS,
   },
   dairy: {
@@ -621,7 +621,7 @@ function estimatedNextReleaseLabel(today = new Date()) {
 // ---------------------------------------------------------------------------
 function drawSparkline(canvas, values, {
   lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5,
-  hoverIdx = null, annotations = [],
+  hoverIdx = null, annotations = [], axes = null, padLeft = null, padBottom = null,
 } = {}) {
   if (!values || values.filter((v) => v != null).length < 2) return;
 
@@ -645,10 +645,43 @@ function drawSparkline(canvas, values, {
   const max = Math.max(...valid);
   const range = max - min || 1;
 
+  // Plot region: extra left/bottom gutters only when axes are drawn
+  const pl = padLeft ?? padding;
+  const pb = padBottom ?? padding;
   const pts = values.map((v, i) => v == null ? null : ({
-    x: padding + (i / (values.length - 1)) * (cssW - padding * 2),
-    y: cssH - padding - ((v - min) / range) * (cssH - padding * 2),
+    x: pl + (i / (values.length - 1)) * (cssW - pl - padding),
+    y: cssH - pb - ((v - min) / range) * (cssH - pb - padding),
   }));
+
+  // Axes: recessive hairline gridlines + min/mid/max y labels + year x labels
+  if (axes) {
+    ctx.font = '10px "Avenir Next", "Helvetica Neue", Arial, sans-serif';
+    const yTicks = [min, (min + max) / 2, max];
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (const tick of yTicks) {
+      const y = cssH - pb - ((tick - min) / range) * (cssH - pb - padding);
+      ctx.strokeStyle = hexToRgba(lineColor, 0.14);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pl, y);
+      ctx.lineTo(cssW - padding, y);
+      ctx.stroke();
+      ctx.fillStyle = hexToRgba(lineColor, 0.6);
+      ctx.fillText(formatCompact.format(tick * 1000), pl - 7, y);
+    }
+    if (axes.dates) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = hexToRgba(lineColor, 0.6);
+      axes.dates.forEach((d, i) => {
+        if (!d || d.slice(5, 7) !== "01" || !pts[i]) return;
+        const x = pts[i].x;
+        if (x < pl + 14 || x > cssW - padding - 14) return;
+        ctx.fillText(d.slice(0, 4), x, cssH - 5);
+      });
+    }
+  }
 
   // Split into contiguous segments around gaps
   const segments = [];
@@ -670,9 +703,9 @@ function drawSparkline(canvas, values, {
     }
     // Filled area
     ctx.beginPath();
-    ctx.moveTo(seg[0].x, cssH - padding);
+    ctx.moveTo(seg[0].x, cssH - pb);
     seg.forEach((p) => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(seg[seg.length - 1].x, cssH - padding);
+    ctx.lineTo(seg[seg.length - 1].x, cssH - pb);
     ctx.closePath();
     ctx.fillStyle = hexToRgba(lineColor, fillOpacity);
     ctx.fill();
@@ -715,7 +748,7 @@ function drawSparkline(canvas, values, {
     const hp = pts[hoverIdx];
     ctx.beginPath();
     ctx.moveTo(hp.x, padding);
-    ctx.lineTo(hp.x, cssH - padding);
+    ctx.lineTo(hp.x, cssH - pb);
     ctx.strokeStyle = hexToRgba(lineColor, 0.35);
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
@@ -1010,7 +1043,7 @@ function renderChartStrip(data, filter) {
   const dates = snapshots.map((s) => s.observationDate);
   const annotations = buildTrendAnnotations(values, dates, filter);
 
-  const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, annotations };
+  const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, annotations, padLeft: 52, padBottom: 22, axes: { dates } };
   drawSparkline(canvas, values, opts);
   canvas.setAttribute("role", "img");
   canvas.setAttribute("aria-label",
@@ -1028,14 +1061,15 @@ function bindChartHover(canvas, values, dates, opts) {
   const valueEl = tooltip.querySelector(".chart-tooltip-value");
   const noteEl = tooltip.querySelector(".chart-tooltip-note");
   const padding = opts.padding ?? 12;
+  const padL = opts.padLeft ?? padding;
   const n = values.length;
   const annotations = opts.annotations || [];
 
   function getIdx(clientX) {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
-    const step = (rect.width - padding * 2) / (n - 1);
-    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    const step = (rect.width - padL - padding) / (n - 1);
+    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padL) / step)));
     return nearestDataIdx(values, raw);
   }
 
@@ -1045,8 +1079,8 @@ function bindChartHover(canvas, values, dates, opts) {
     drawSparkline(canvas, values, { ...opts, hoverIdx: idx });
 
     const rect = canvas.getBoundingClientRect();
-    const step = (rect.width - padding * 2) / (n - 1);
-    const xPx = padding + idx * step;
+    const step = (rect.width - padL - padding) / (n - 1);
+    const xPx = padL + idx * step;
     const xPct = (xPx / rect.width) * 100;
 
     tooltip.style.left = `${xPct}%`;
@@ -1099,13 +1133,14 @@ function attachSparklineHover(canvas, values, dates, opts = {}) {
   const dateEl = tooltip.querySelector(".spark-tooltip-date");
   const valueEl = tooltip.querySelector(".spark-tooltip-value");
   const padding = opts.padding ?? 10;
+  const padL = opts.padLeft ?? padding;
   const n = values.length;
 
   function getIdx(clientX) {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
-    const step = (rect.width - padding * 2) / (n - 1);
-    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    const step = (rect.width - padL - padding) / (n - 1);
+    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padL) / step)));
     return nearestDataIdx(values, raw);
   }
 
@@ -1177,20 +1212,14 @@ function renderCompareGrid(data, filter) {
         { label: "Latest", key: "latest", className: "latest" },
       ];
 
-      // Zoom each row's bars to its own min→max range so small monthly
-      // movements are actually visible. Cross-row comparison lives in the
-      // ranking panel; this panel is about direction of change.
-      const rowVals = entries.map((e) => item.values[e.key]);
-      const rowMax = Math.max(...rowVals);
-      const rowMin = Math.min(...rowVals);
-      const rowRange = rowMax - rowMin;
+      // Zero-baseline bars: heights are proportional to volume, so a 2%
+      // move looks like a 2% move. The % caption carries the direction.
+      const rowMax = Math.max(...entries.map((e) => item.values[e.key]));
 
       const bars = entries
         .map((entry) => {
           const value = item.values[entry.key];
-          const height = rowRange === 0
-            ? 100
-            : 22 + ((value - rowMin) / rowRange) * 78;
+          const height = rowMax > 0 ? Math.max(3, (value / rowMax) * 100) : 0;
           return `
             <div class="compare-bar-wrap">
               <div class="compare-bar-zone">
@@ -1294,6 +1323,10 @@ function renderThroughTime(data, filter = "all") {
     const yoyText = yoy !== null ? `${yoy >= 0 ? "+" : ""}${Math.round(yoy)}% YoY` : "";
     const asOf = known && known.monthsStale > 0 ? ` · as of ${shortMonthYear(known.date)}` : "";
     const canvasId = `tt-canvas-${key}`;
+    const ttSnaps = data.archive.snapshots.slice(-series.length);
+    const rangeRow = ttSnaps.length >= 2
+      ? `<div class="spark-range" aria-hidden="true"><span>${ttSnaps[0].observationDate.slice(0, 4)}</span><span>${ttSnaps[ttSnaps.length - 1].observationDate.slice(0, 4)}</span></div>`
+      : "";
     const fmt = formatHeadlineValue(key, latest);
 
     return `
@@ -1303,8 +1336,9 @@ function renderThroughTime(data, filter = "all") {
           <p class="sparkline-tile-value">${fmt.num}${state.perCapita ? `<span class="sparkline-tile-percap"> ${fmt.unit}</span>` : ""}</p>
         </div>
         <div class="sparkline-tile-canvas-wrap">
-          <canvas class="sparkline-tile-canvas" id="${canvasId}" role="img" aria-label="${label} 5-year trend, latest ${formatCompact.format(latest * 1000)} lb"></canvas>
+          <canvas class="sparkline-tile-canvas" id="${canvasId}" role="img" aria-label="${escapeHtml(label)} 5-year trend, latest ${formatCompact.format(latest * 1000)} lb"></canvas>
         </div>
+        ${rangeRow}
         ${yoyText || asOf ? `<p class="sparkline-tile-yoy">${yoyText}${asOf}</p>` : ""}
       </div>`;
   }).join("");
@@ -1448,6 +1482,10 @@ function renderDcTrackedTile(archive, key) {
   const label = labelFor(key);
   const known = lastKnown(archive, key);
   const canvasId = `dc-canvas-${key}`;
+  const dcSnaps = archive.snapshots;
+  const dcRange = dcSnaps.length >= 2
+    ? `<div class="spark-range" aria-hidden="true"><span>${dcSnaps[Math.max(0, dcSnaps.length - 60)].observationDate.slice(0, 4)}</span><span>${dcSnaps[dcSnaps.length - 1].observationDate.slice(0, 4)}</span></div>`
+    : "";
   const insight = computeInsight(key, archive);
 
   if (!known) {
@@ -1473,7 +1511,8 @@ function renderDcTrackedTile(archive, key) {
         <p class="dc-tile-value">${fmt.num}<span class="dc-tile-unit"> ${fmt.unit}</span></p>
         ${asOf}
       </div>
-      <div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}" role="img" aria-label="${label} 5-year trend"></canvas></div>
+      <div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}" role="img" aria-label="${escapeHtml(label)} 5-year trend"></canvas></div>
+      ${dcRange}
       ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
     </div>`;
 }
@@ -1662,7 +1701,7 @@ function drawModalChart() {
   const dates = archive.snapshots.map((s) => s.observationDate).slice(0, series.length);
   const group = COMMODITY_GROUPS[key];
   const colors = TT_COLORS[group] || { line: "#3456d1" };
-  const opts = { lineColor: colors.line, fillOpacity: 0.12, lineWidth: 2, padding: 12 };
+  const opts = { lineColor: colors.line, fillOpacity: 0.12, lineWidth: 2, padding: 12, padLeft: 52, padBottom: 22, axes: { dates } };
   drawSparkline(canvas, series, opts);
   attachSparklineHover(canvas, series, dates, opts);
 }
@@ -1781,13 +1820,23 @@ function bindFilters(data) {
 // Per-American unit toggle
 // ---------------------------------------------------------------------------
 function bindUnitToggle(data) {
-  const toggle = document.getElementById("unit-toggle");
-  if (!toggle) return;
-  toggle.addEventListener("click", () => {
+  const trigger = document.getElementById("hero-number-row");
+  if (!trigger) return;
+  const hint = document.getElementById("hero-tap-hint");
+  const flip = () => {
     state.perCapita = !state.perCapita;
-    toggle.classList.toggle("is-active", state.perCapita);
-    toggle.setAttribute("aria-pressed", String(state.perCapita));
+    trigger.classList.toggle("is-active", state.perCapita);
+    trigger.setAttribute("aria-pressed", String(state.perCapita));
+    if (hint) {
+      hint.textContent = state.perCapita
+        ? "Your share of the freezer. Click to zoom back out."
+        : "Click the number to see your share of it.";
+    }
     rerenderForState(data);
+  };
+  trigger.addEventListener("click", flip);
+  trigger.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
   });
 }
 
