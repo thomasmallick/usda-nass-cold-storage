@@ -6,15 +6,19 @@
     <title>US Cold Storage — USDA NASS</title>
     <meta name="description" content="Monthly front-page view of US frozen food reserves, re-cut from USDA NASS cold storage data." />
     <meta name="theme-color" content="#f4ebdc" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>" />
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+
+    <!-- Open Graph / social unfurls -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="What America keeps frozen." />
-    <meta property="og:description" content="Every frozen pound the US warehouses right now — butter, beef, broccoli, and everything in between. Monthly USDA NASS cold storage data." />
+    <meta property="og:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
     <meta property="og:image" content="./assets/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="What America keeps frozen." />
-    <meta name="twitter:description" content="Every frozen pound the US warehouses right now, from USDA NASS cold storage data." />
-    <link rel="stylesheet" href="./styles.css" />
+    <meta name="twitter:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
+    <meta name="twitter:image" content="./assets/og-image.png" />
+
+    <link rel="stylesheet" href="./styles.css?v=3" />
   </head>
   <body>
     <div class="editorial-dashboard-shell" data-mode="editorial-mosaic">
@@ -25,6 +29,9 @@
           <h1 class="page-title">What America keeps frozen.</h1>
         </div>
         <div class="topbar-meta">
+          <button class="unit-toggle" id="unit-toggle" type="button" aria-pressed="false" title="Show every number as what it means for one person">
+            ≈ per American
+          </button>
           <div class="meta-chip">
             <span class="meta-label">Source</span>
             <strong><a class="source-nass-link" href="https://www.nass.usda.gov/Surveys/Guide_to_NASS_Surveys/Cold_Storage/index.php" target="_blank" rel="noreferrer">USDA NASS</a></strong>
@@ -35,22 +42,23 @@
       <!-- ═══════════════════════════════════════════
            TAB NAVIGATION
       ════════════════════════════════════════════ -->
-      <nav class="tab-bar" aria-label="Dashboard views">
-        <button class="tab-pill tab-pill--active" data-tab="overview" type="button" aria-pressed="true">Overview</button>
-        <button class="tab-pill" data-tab="through-time" type="button" aria-pressed="false">Through Time</button>
-        <button class="tab-pill" data-tab="deep-cuts" type="button" aria-pressed="false">Deep Cuts</button>
+      <nav class="tab-bar" role="tablist" aria-label="Dashboard views">
+        <button class="tab-pill tab-pill--active" data-tab="overview" type="button" role="tab" aria-selected="true">Overview</button>
+        <button class="tab-pill" data-tab="through-time" type="button" role="tab" aria-selected="false">Through Time</button>
+        <button class="tab-pill" data-tab="seasonality" type="button" role="tab" aria-selected="false">Seasons</button>
+        <button class="tab-pill" data-tab="deep-cuts" type="button" role="tab" aria-selected="false">Deep Cuts</button>
       </nav>
 
       <!-- ═══════════════════════════════════════════
            VIEW: OVERVIEW
       ════════════════════════════════════════════ -->
-      <div class="view-section" id="view-overview">
+      <div class="view-section" id="view-overview" role="tabpanel">
 
         <section class="filter-rail" aria-label="Category filters">
           <button class="filter-pill is-active" data-filter="all" type="button" aria-pressed="true">All storage</button>
-          <button class="filter-pill" data-filter="dairy" type="button" aria-pressed="false">Dairy</button>
-          <button class="filter-pill" data-filter="produce" type="button" aria-pressed="false">Produce</button>
-          <button class="filter-pill" data-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
+          <button class="filter-pill filter-pill--dairy" data-filter="dairy" type="button" aria-pressed="false">Dairy</button>
+          <button class="filter-pill filter-pill--produce" data-filter="produce" type="button" aria-pressed="false">Produce</button>
+          <button class="filter-pill filter-pill--protein" data-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
         </section>
 
         <main class="editorial-dashboard-grid">
@@ -65,10 +73,10 @@
             <div class="hero-copy">
               <div class="hero-number-row">
                 <span class="hero-number" id="hero-value">—</span>
-                <span class="hero-unit">lb</span>
+                <span class="hero-unit" id="hero-unit">lb</span>
               </div>
               <p class="hero-subtitle">
-                Every frozen pound the US warehouses right now — butter, beef, broccoli, and everything in between.
+                The 15 headline categories USDA reports each month — butter, beef, broccoli, and everything in between.
               </p>
             </div>
             <div class="hero-foot">
@@ -86,41 +94,41 @@
           <section class="editorial-panel editorial-panel--sun stat-panel" data-span="stat-1">
             <div>
               <p class="eyebrow">Fast mover</p>
-              <h2 class="panel-title">Butter snapped back.</h2>
+              <h2 class="panel-title" id="mover-title">—</h2>
             </div>
             <div class="stat-block">
-              <p class="stat-number" id="butter-value">—</p>
-              <p class="stat-unit">lb in storage</p>
+              <p class="stat-number" id="mover-value">—</p>
+              <p class="stat-unit" id="mover-unit">lb in storage</p>
             </div>
             <div class="stat-deltas">
               <div>
                 <p class="mini-label">MoM</p>
-                <span class="delta" id="butter-mom">—</span>
+                <span class="delta" id="mover-mom">—</span>
               </div>
               <div>
                 <p class="mini-label">YoY</p>
-                <span class="delta" id="butter-yoy">—</span>
+                <span class="delta" id="mover-yoy">—</span>
               </div>
             </div>
-            <span class="insight-badge" id="insight-butter"></span>
+            <span class="insight-badge" id="insight-mover"></span>
           </section>
 
           <section class="editorial-panel editorial-panel--coral stat-panel" data-span="stat-2">
             <div>
               <p class="eyebrow">Volume leader</p>
-              <h2 class="panel-title">Poultry holds the most ground.</h2>
+              <h2 class="panel-title" id="leader-title">—</h2>
             </div>
             <div class="stat-block">
-              <p class="stat-number" id="poultry-value">—</p>
-              <p class="stat-unit">lb frozen poultry</p>
+              <p class="stat-number" id="leader-value">—</p>
+              <p class="stat-unit" id="leader-unit">lb in storage</p>
             </div>
             <div class="stat-deltas">
               <div>
                 <p class="mini-label">MoM</p>
-                <span class="delta" id="poultry-mom">—</span>
+                <span class="delta" id="leader-mom">—</span>
               </div>
             </div>
-            <span class="insight-badge" id="insight-poultry"></span>
+            <span class="insight-badge" id="insight-leader"></span>
           </section>
 
           <!-- ROW 2 — Narrative slab + Chart strip -->
@@ -156,8 +164,10 @@
               <div class="chart-tooltip" id="chart-tooltip" aria-hidden="true">
                 <p class="chart-tooltip-date"></p>
                 <p class="chart-tooltip-value"></p>
+                <p class="chart-tooltip-note"></p>
               </div>
             </div>
+            <p class="panel-footnote-text">Ring markers flag notable months — hover or tap to read them.</p>
           </section>
 
           <!-- ROW 3 — Cave art + Comparison + Source -->
@@ -167,7 +177,7 @@
               <p class="eyebrow">Cheese cave</p>
               <p class="mini-note mini-note--light">Scaled from latest mix</p>
             </div>
-            <div class="cave-stack" id="cave-stack" aria-hidden="true"></div>
+            <div class="cave-stack" id="cave-stack"></div>
             <p class="panel-footnote-text">
               Width reflects relative storage volume — American, Swiss, other natural, and butter as the bright outer puck.
             </p>
@@ -181,6 +191,7 @@
               </div>
             </div>
             <div class="compare-grid" id="compare-grid"></div>
+            <p class="attribution">Bars zoom to each row's own range to make the moves visible.</p>
           </section>
 
           <section class="editorial-panel editorial-panel--paper source-panel" data-span="source">
@@ -217,39 +228,52 @@
       <!-- ═══════════════════════════════════════════
            VIEW: THROUGH TIME
       ════════════════════════════════════════════ -->
-      <div class="view-section view-section--hidden" id="view-through-time">
+      <div class="view-section view-section--hidden" id="view-through-time" role="tabpanel">
         <div class="through-time-header">
           <p class="eyebrow">5-year archive · monthly snapshots</p>
           <h2 class="view-title">Every commodity, across time.</h2>
-          <p class="view-subtitle">Each tile shows 60 months of cold storage volumes. Peaks and valleys reveal seasonal rhythms, supply shocks, and the slow drift of American eating habits.</p>
+          <p class="view-subtitle">Each tile shows 60 months of cold storage volumes. Peaks and valleys reveal seasonal rhythms, supply shocks, and the slow drift of American eating habits. Tap any tile for the full story.</p>
         </div>
         <div class="through-time-filter-rail">
           <button class="filter-pill is-active" data-tt-filter="all" type="button" aria-pressed="true">All</button>
-          <button class="filter-pill" data-tt-filter="dairy" type="button" aria-pressed="false">Dairy</button>
-          <button class="filter-pill" data-tt-filter="produce" type="button" aria-pressed="false">Produce</button>
-          <button class="filter-pill" data-tt-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
-        </div>
-        <div class="tt-legend" aria-label="Tile color key">
-          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--dairy"></span>Dairy</span>
-          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--produce"></span>Produce</span>
-          <span class="tt-legend-item"><span class="tt-legend-swatch tt-legend-swatch--protein"></span>Meat + poultry</span>
+          <button class="filter-pill filter-pill--dairy" data-tt-filter="dairy" type="button" aria-pressed="false">Dairy</button>
+          <button class="filter-pill filter-pill--produce" data-tt-filter="produce" type="button" aria-pressed="false">Produce</button>
+          <button class="filter-pill filter-pill--protein" data-tt-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
         </div>
         <div class="through-time-grid" id="through-time-grid"></div>
       </div>
 
       <!-- ═══════════════════════════════════════════
+           VIEW: SEASONS
+      ════════════════════════════════════════════ -->
+      <div class="view-section view-section--hidden" id="view-seasonality" role="tabpanel">
+        <div class="seasonality-header">
+          <p class="eyebrow">Average year · 5 seasons of data</p>
+          <h2 class="view-title">The freezer has seasons.</h2>
+          <p class="view-subtitle">Each curve is a commodity's average year — how stocks swell and drain with harvests, holidays, and habit. 100 is the commodity's own average; the highlighted band marks the month being reported.</p>
+          <p class="seasonality-now" id="seasonality-now"></p>
+        </div>
+        <div class="seasonality-grid" id="seasonality-grid"></div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════
            VIEW: DEEP CUTS
       ════════════════════════════════════════════ -->
-      <div class="view-section view-section--hidden" id="view-deep-cuts">
+      <div class="view-section view-section--hidden" id="view-deep-cuts" role="tabpanel">
         <div class="deep-cuts-header">
           <p class="eyebrow">The full inventory · 70+ commodities</p>
           <h2 class="view-title">The deep freeze.</h2>
-          <p class="view-subtitle">Everything the US stores cold — from three-quarters of a billion pounds of chicken to things you had no idea anyone was tracking.</p>
+          <p class="view-subtitle">Everything the US stores cold — from 800M lb of chicken to things you had no idea anyone was tracking.</p>
         </div>
 
         <section class="dc-section">
           <h3 class="category-banner">Things you didn't know they tracked</h3>
           <div class="dc-curiosities-grid" id="dc-curiosities"></div>
+        </section>
+
+        <section class="dc-section">
+          <h3 class="category-banner">Freezer records · highs and lows of this 5-year archive</h3>
+          <div class="dc-records-grid" id="dc-records"></div>
         </section>
 
         <section class="dc-section">
@@ -285,6 +309,13 @@
 
     </div>
 
-    <script type="module" src="./app.js"></script>
+    <!-- Commodity detail modal -->
+    <div class="modal-backdrop" id="commodity-modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="Commodity detail">
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js?v=3"></script>
   </body>
 </html>
