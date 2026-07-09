@@ -103,6 +103,36 @@ a {
   font-size: 1rem;
 }
 
+/* ── Per-American unit toggle ────────────────────────────── */
+.unit-toggle {
+  appearance: none;
+  border: var(--ed-line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.44);
+  backdrop-filter: blur(8px);
+  color: var(--ed-ink);
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 180ms var(--ed-spring),
+    color 180ms var(--ed-spring),
+    transform 200ms var(--ed-spring);
+}
+
+.unit-toggle:hover,
+.unit-toggle:focus-visible {
+  transform: translateY(-2px);
+}
+
+.unit-toggle.is-active {
+  background: var(--em-cobalt);
+  border-color: var(--em-cobalt);
+  color: var(--ed-paper-2);
+}
+
 /* ── Filter rail ─────────────────────────────────────────── */
 .filter-rail {
   display: flex;
@@ -138,6 +168,23 @@ a {
   color: var(--ed-paper-2);
   border-color: var(--ed-ink);
 }
+
+/* Category swatch dots inside the pills (replaces a separate legend row) */
+.filter-pill--dairy::before,
+.filter-pill--produce::before,
+.filter-pill--protein::before {
+  content: "";
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  margin-right: 0.45rem;
+  vertical-align: 0.02em;
+}
+
+.filter-pill--dairy::before   { background: var(--em-sun); }
+.filter-pill--produce::before { background: var(--em-kelp); }
+.filter-pill--protein::before { background: var(--em-coral); }
 
 /* ── Grid ────────────────────────────────────────────────── */
 .editorial-dashboard-grid {
@@ -367,7 +414,8 @@ a {
 
 .cave-stack {
   display: grid;
-  align-content: end;
+  align-content: stretch;
+  grid-auto-rows: minmax(2.4rem, 1fr);
   gap: 0.5rem;
   flex: 1;
   padding-top: 0.5rem;
@@ -375,13 +423,18 @@ a {
 
 .cave-layer {
   position: relative;
+  display: flex;
+  align-items: center;
   border-radius: 1.2rem 2rem 1.1rem 1.8rem;
   min-height: 2.4rem;
   padding: 0.8rem 1rem;
   color: var(--ed-ink);
   overflow: hidden;
   animation: layerPulse 7s ease-in-out infinite;
+  cursor: pointer;
 }
+
+.cave-layer-label { width: 100%; }
 
 .cave-layer::after {
   content: "";
@@ -702,35 +755,6 @@ a {
   margin-bottom: var(--ed-space-4);
 }
 
-.tt-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ed-space-3);
-  margin: 0 0 var(--ed-space-4);
-}
-
-.tt-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.65;
-}
-
-.tt-legend-swatch {
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 2px;
-  border: 1px solid color-mix(in srgb, var(--ed-ink) 14%, transparent);
-}
-
-.tt-legend-swatch--dairy   { background: color-mix(in srgb, var(--em-sun) 18%, var(--ed-paper-2)); }
-.tt-legend-swatch--protein { background: color-mix(in srgb, var(--em-coral) 12%, var(--ed-paper-2)); }
-.tt-legend-swatch--produce { background: color-mix(in srgb, var(--em-kelp) 14%, var(--ed-paper-2)); }
-
 .through-time-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -841,7 +865,7 @@ a {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 60;
+  z-index: 120; /* must clear the modal backdrop (z-index 80) */
   background: var(--ed-paper-2);
   color: var(--ed-ink);
   padding: 0.4rem 0.7rem;
@@ -873,9 +897,15 @@ a {
   letter-spacing: -0.02em;
 }
 
-/* Hoverable sparkline canvases */
+/* Hoverable sparkline canvases — pan-y keeps page scroll working on touch
+   while horizontal scrubbing drives the tooltip */
 .sparkline-tile-canvas,
-.dc-tile-canvas { cursor: crosshair; }
+.dc-tile-canvas,
+.trend-canvas,
+.modal-canvas {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
 
 /* ── Deep Cuts v2 ────────────────────────────────────────── */
 .deep-cuts-header {
@@ -1120,6 +1150,366 @@ a {
   border-bottom-color: var(--em-coral);
 }
 
+/* ── "As of" staleness tags ──────────────────────────────── */
+.dc-tile-asof,
+.sparkline-tile-percap {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.sparkline-tile-percap {
+  display: block;
+  font-family: var(--ed-font-sans);
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+/* ── Clickable data tiles ────────────────────────────────── */
+.sparkline-tile,
+.dc-tile[data-commodity-key],
+.record-card,
+.seasonal-tile,
+.compare-row[data-commodity-key],
+.ranking-row[data-commodity-key] {
+  cursor: pointer;
+}
+
+/* ── Chart tooltip annotation note ───────────────────────── */
+.chart-tooltip-note {
+  margin: 0.15rem 0 0;
+  max-width: 24ch;
+  white-space: normal;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--em-cobalt);
+}
+
+.chart-tooltip-note:empty { display: none; }
+
+/* ── Seasonality view ────────────────────────────────────── */
+.seasonality-header {
+  margin-bottom: var(--ed-space-4);
+}
+
+.seasonality-now {
+  margin: var(--ed-space-3) 0 0;
+  max-width: 56ch;
+  font-family: var(--ed-font-display);
+  font-size: 1.25rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+
+.seasonality-now strong { color: var(--em-coral); }
+
+.seasonality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px;
+  background: color-mix(in srgb, var(--ed-ink) 12%, transparent);
+  border: var(--ed-line);
+  margin-bottom: var(--ed-space-5);
+}
+
+.seasonal-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ed-space-2);
+  padding: var(--ed-space-4);
+  background: var(--ed-paper-2);
+  min-height: 190px;
+  transition:
+    transform 200ms var(--ed-spring),
+    box-shadow 200ms var(--ed-spring);
+}
+
+.seasonal-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.1);
+}
+
+/* Reuse the through-time category tints */
+.seasonal-tile.sparkline-tile--dairy   { background: color-mix(in srgb, var(--em-sun) 18%, var(--ed-paper-2)); }
+.seasonal-tile.sparkline-tile--protein { background: color-mix(in srgb, var(--em-coral) 12%, var(--ed-paper-2)); }
+.seasonal-tile.sparkline-tile--produce { background: color-mix(in srgb, var(--em-kelp) 14%, var(--ed-paper-2)); }
+
+.seasonal-tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.seasonal-tile-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.seasonal-swing {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ed-ink) 8%, transparent);
+  white-space: nowrap;
+}
+
+.seasonal-swing--mid { background: color-mix(in srgb, var(--em-sun) 55%, transparent); }
+.seasonal-swing--big { background: var(--em-coral); color: var(--ed-paper-2); }
+
+.seasonal-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.seasonal-month {
+  font-family: var(--ed-font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  fill: currentColor;
+  opacity: 0.4;
+}
+
+.seasonal-month--now {
+  opacity: 1;
+  font-weight: 800;
+}
+
+.seasonal-now-band {
+  fill: color-mix(in srgb, var(--ed-ink) 7%, transparent);
+}
+
+.seasonal-tile-note {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+/* ── Freezer records ─────────────────────────────────────── */
+.dc-records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--ed-space-3);
+}
+
+.record-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ed-space-2);
+  padding: var(--ed-space-4);
+  background: var(--ed-ink);
+  color: var(--ed-paper-2);
+  border-radius: 3px;
+  min-height: 140px;
+  transition:
+    transform 200ms var(--ed-spring),
+    box-shadow 200ms var(--ed-spring);
+}
+
+.record-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.25);
+}
+
+.record-card-label {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.record-card-rows {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: auto;
+}
+
+.record-card-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.record-kind {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+}
+
+.record-kind--high { background: var(--em-sun); color: var(--ed-ink); }
+.record-kind--low  { background: var(--em-cobalt); color: var(--ed-paper-2); }
+
+.record-value {
+  font-family: var(--ed-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.record-date { opacity: 0.6; white-space: nowrap; }
+
+.record-card .insight-badge {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--ed-paper-2);
+}
+
+/* ── Commodity detail modal ──────────────────────────────── */
+.modal-backdrop[hidden] { display: none; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, var(--ed-ink) 55%, transparent);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ed-space-3);
+}
+
+.modal-card {
+  width: min(680px, 100%);
+  max-height: min(86vh, 780px);
+  overflow-y: auto;
+  background: var(--ed-paper-2);
+  color: var(--ed-ink);
+  border-radius: 4px;
+  padding: var(--ed-space-5);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--ed-space-3);
+}
+
+.modal-title {
+  margin: 0.3rem 0 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.modal-close {
+  appearance: none;
+  border: var(--ed-line);
+  border-radius: 999px;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--ed-ink);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    background-color 180ms var(--ed-spring),
+    transform 200ms var(--ed-spring);
+}
+
+.modal-close:hover,
+.modal-close:focus-visible {
+  background: var(--ed-ink);
+  color: var(--ed-paper-2);
+  transform: rotate(90deg);
+}
+
+.modal-hero-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ed-space-3);
+  flex-wrap: wrap;
+  margin-top: var(--ed-space-4);
+}
+
+.modal-number {
+  margin: 0;
+  font-family: var(--ed-font-display);
+  font-size: clamp(2.8rem, 7vw, 4.4rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.modal-number-unit {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.modal-deltas {
+  display: flex;
+  gap: var(--ed-space-4);
+  align-items: flex-end;
+}
+
+.modal-equivalence {
+  margin: var(--ed-space-3) 0 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  max-width: 48ch;
+}
+
+.modal-equivalence strong { color: var(--em-coral); }
+
+.modal-chart-wrap {
+  margin-top: var(--ed-space-4);
+  height: 180px;
+  background: color-mix(in srgb, var(--ed-ink) 4%, transparent);
+  border-radius: 3px;
+}
+
+.modal-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.modal-meta-row {
+  display: flex;
+  gap: var(--ed-space-5);
+  flex-wrap: wrap;
+  margin-top: var(--ed-space-4);
+}
+
+.modal-meta-value {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.modal-seasonal {
+  margin-top: var(--ed-space-4);
+  padding-top: var(--ed-space-3);
+  border-top: var(--ed-line);
+}
+
+.modal-seasonal .seasonal-svg {
+  max-width: 360px;
+  margin-top: 0.5rem;
+}
+
 /* ── Site footer ─────────────────────────────────────────── */
 .site-footer {
   margin-top: var(--ed-space-5);
@@ -1166,4 +1556,16 @@ a {
   .dc-curiosities-grid { grid-template-columns: 1fr; }
   .dc-mixed-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .dc-ledger { column-count: 2; }
+
+  .modal-card { padding: var(--ed-space-4); }
+}
+
+@media (max-width: 640px) {
+  /* Source attribution lives in the Source panel; reclaim the row */
+  .topbar-meta .meta-chip { display: none; }
+
+  .tab-pill { padding: 0.6rem 1rem; font-size: 0.86rem; }
+  .filter-pill { padding: 0.6rem 0.9rem; font-size: 0.84rem; }
+
+  .seasonality-grid { grid-template-columns: 1fr; }
 }

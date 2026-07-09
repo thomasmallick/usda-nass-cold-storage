@@ -6,7 +6,7 @@ on:
     # USDA releases cold storage data around the 22nd–24th.
     - cron: "0 12 25 * *"
   workflow_dispatch:
-    # Manual trigger for testing or backfilling.
+    # Manual trigger for testing, backfilling, or gap repair.
     inputs:
       mode:
         description: "Fetch mode"
@@ -16,12 +16,14 @@ on:
         options:
           - latest
           - backfill-60
+          - repair
 
 jobs:
   fetch-and-commit:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Checkout
@@ -36,7 +38,7 @@ jobs:
         run: pip install requests
 
       - name: Fetch latest data
-        if: github.event.inputs.mode != 'backfill-60'
+        if: github.event.inputs.mode == 'latest' || github.event.inputs.mode == ''
         env:
           USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
         run: python scripts/fetch-usda.py
@@ -47,6 +49,15 @@ jobs:
           USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
         run: python scripts/fetch-usda.py --backfill 60
 
+      - name: Repair archive gaps
+        if: github.event.inputs.mode == 'repair'
+        env:
+          USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
+        run: python scripts/fetch-usda.py --repair
+
+      - name: Validate archive
+        run: python scripts/validate-archive.py
+
       - name: Commit updated archive
         run: |
           git config user.name "github-actions[bot]"
@@ -56,6 +67,16 @@ jobs:
             git commit -m "data: update cold storage archive $(date +'%Y-%m')" &&
             git push
           )
+
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Cold storage data update failed ($(date +'%Y-%m-%d'))" \
+            --body "The monthly USDA data workflow failed. The archive was left untouched. Check the run log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --repo "${{ github.repository }}" || true
 
       # Optional: trigger a Netlify or Vercel redeploy after data update.
       # Uncomment and set DEPLOY_HOOK_URL as a GitHub repository secret.

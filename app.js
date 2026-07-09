@@ -1,5 +1,17 @@
-const DATA_URL = "./data/cold-storage-archive.json";
+const DATA_URL = "./data/cold-storage-archive.json?v=2";
 const US_POPULATION = 335_000_000;
+
+// ---------------------------------------------------------------------------
+// Global UI state — single source of truth for re-renders (resize, toggles)
+// ---------------------------------------------------------------------------
+const state = {
+  data: null,
+  tab: "overview",
+  overviewFilter: "all",
+  ttFilter: "all",
+  perCapita: false,
+  modalKey: null,
+};
 
 // ---------------------------------------------------------------------------
 // Commodity metadata
@@ -66,8 +78,27 @@ const DEEP_CUT_LABELS = {
   broccoli:        "Broccoli",
 };
 
+function labelFor(key) {
+  return COMMODITY_LABELS[key] || DEEP_CUT_LABELS[key] || key;
+}
+
+// Base commodities with no overlap — used for the honest "All" ranking.
+const LEAF_KEYS = [
+  "butter", "american_cheese", "swiss_cheese", "other_natural_cheese",
+  "total_chicken", "total_turkey",
+  "total_frozen_fruit", "total_frozen_vegetables", "total_frozen_potatoes",
+  "total_beef", "total_pork",
+];
+
+// Candidates for the dynamic "volume leader" tile — non-overlapping reserves.
+const LEADER_KEYS = [
+  "total_frozen_poultry", "total_frozen_red_meat", "total_natural_cheese",
+  "total_frozen_vegetables", "total_frozen_potatoes", "total_frozen_fruit",
+  "butter",
+];
+
 // ---------------------------------------------------------------------------
-// Deep Cuts v2 — full USDA inventory
+// Deep Cuts — full USDA inventory
 // ---------------------------------------------------------------------------
 const DC_CURIOSITIES = [
   { label: "Boysenberries",  color: "lavender", copy: "Yes, specifically boysenberries. A dedicated line item in the national cold storage ledger." },
@@ -104,85 +135,107 @@ const DC_LEDGER_ITEMS = [
   "Safflower", "Sorghum", "Soybeans", "Sunflower Seed", "Wheat", "Whey",
 ];
 
+// Keys surfaced in the Freezer Records section, in display order.
+const RECORD_KEYS = [
+  "butter", "total_frozen_poultry", "pork_bellies",
+  "total_natural_cheese", "strawberries", "total_beef",
+];
+
 // ---------------------------------------------------------------------------
-// Insight recipes: per-capita object equivalences for insight badges
+// Curated trend annotations — real, checkable events only.
+// month matches the observationDate prefix; filters control which chart
+// variants show the marker.
 // ---------------------------------------------------------------------------
-const INSIGHT_RECIPES = {
-  butter:               { unit: "sticks",            lbPerUnit: 0.25  },
-  total_natural_cheese: { unit: "1-lb blocks",        lbPerUnit: 1     },
-  american_cheese:      { unit: "slices",             lbPerUnit: 0.0625 },
-  total_chicken:        { unit: "whole birds",        lbPerUnit: 5     },
-  total_turkey:         { unit: "whole turkeys",      lbPerUnit: 16    },
-  total_frozen_poultry: { unit: "whole birds",        lbPerUnit: 5     },
-  total_beef:           { unit: "burgers",            lbPerUnit: 0.25  },
-  pork_bellies:         { unit: "BLTs worth of bacon", lbPerUnit: 0.125 },
-  total_pork:           { unit: "pork chops",        lbPerUnit: 0.625 },
-  pork_ribs:            { unit: "racks of ribs",     lbPerUnit: 3     },
-  pork_hams:            { unit: "holiday hams",      lbPerUnit: 8     },
-  total_frozen_fruit:   { unit: "pints of berries",  lbPerUnit: 0.75  },
-  strawberries:         { unit: "pints of strawberries", lbPerUnit: 0.75 },
-  blueberries:          { unit: "pints of blueberries",  lbPerUnit: 0.75 },
-  total_frozen_vegetables: { unit: "servings of veg", lbPerUnit: 0.5  },
-  sweet_corn_cut:       { unit: "ears of corn",      lbPerUnit: 0.5   },
-  total_frozen_potatoes: { unit: "bags of fries",    lbPerUnit: 2     },
+const TREND_EVENTS = [
+  { month: "2022-02", label: "Bird flu reaches US commercial flocks", filters: ["protein"] },
+  { month: "2022-10", label: "Butter stocks scrape multi-year lows — shortage headlines", filters: ["dairy"] },
+];
+
+// Curated seasonal one-liners — only for famously seasonal commodities.
+const SEASONAL_NOTES = {
+  total_turkey: "Builds all summer — then Thanksgiving empties the freezer.",
+  butter: "Swells through summer milk flush, drains through holiday baking.",
+  strawberries: "The June harvest floods the freezer in one great wave.",
+  total_frozen_fruit: "Stocks crest after the summer pack, then feed smoothies all winter.",
 };
 
-function computeInsight(commodity, archive) {
-  const snapshots = archive.snapshots;
-  if (!snapshots.length) return "";
+// ---------------------------------------------------------------------------
+// Insight recipes: per-capita object equivalences
+// ---------------------------------------------------------------------------
+const INSIGHT_RECIPES = {
+  butter:               { unit: "sticks",             one: "stick of butter",     lbPerUnit: 0.25 },
+  total_natural_cheese: { unit: "1-lb blocks",        one: "1-lb block",          lbPerUnit: 1 },
+  american_cheese:      { unit: "slices",             one: "slice",               lbPerUnit: 0.0625 },
+  swiss_cheese:         { unit: "slices",             one: "slice",               lbPerUnit: 0.0625 },
+  other_natural_cheese: { unit: "1-lb blocks",        one: "1-lb block",          lbPerUnit: 1 },
+  total_chicken:        { unit: "whole birds",        one: "whole bird",          lbPerUnit: 5 },
+  total_turkey:         { unit: "whole turkeys",      one: "whole turkey",        lbPerUnit: 16 },
+  total_frozen_poultry: { unit: "whole birds",        one: "whole bird",          lbPerUnit: 5 },
+  total_beef:           { unit: "burgers",            one: "burger",              lbPerUnit: 0.25 },
+  beef_boneless:        { unit: "burgers",            one: "burger",              lbPerUnit: 0.25 },
+  beef_bone_in:         { unit: "T-bone steaks",      one: "T-bone steak",        lbPerUnit: 1 },
+  total_frozen_red_meat: { unit: "burgers",           one: "burger",              lbPerUnit: 0.25 },
+  pork_bellies:         { unit: "BLTs worth of bacon", one: "BLT worth of bacon", lbPerUnit: 0.125 },
+  total_pork:           { unit: "pork chops",         one: "pork chop",           lbPerUnit: 0.625 },
+  pork_loins:           { unit: "pork chops",         one: "pork chop",           lbPerUnit: 0.625 },
+  pork_ribs:            { unit: "racks of ribs",      one: "rack of ribs",        lbPerUnit: 3 },
+  pork_hams:            { unit: "holiday hams",       one: "holiday ham",         lbPerUnit: 8 },
+  pork_butts:           { unit: "pulled-pork sandwiches", one: "pulled-pork sandwich", lbPerUnit: 0.33 },
+  pork_trimmings:       { unit: "breakfast sausages", one: "breakfast sausage",   lbPerUnit: 0.06 },
+  total_frozen_fruit:   { unit: "pints of berries",   one: "pint of berries",     lbPerUnit: 0.75 },
+  strawberries:         { unit: "pints of strawberries", one: "pint of strawberries", lbPerUnit: 0.75 },
+  blueberries:          { unit: "pints of blueberries",  one: "pint of blueberries",  lbPerUnit: 0.75 },
+  raspberries:          { unit: "pints of raspberries",  one: "pint of raspberries",  lbPerUnit: 0.75 },
+  cherries_tart:        { unit: "cherry pies' worth",  one: "cherry pie's worth",  lbPerUnit: 1.5 },
+  total_frozen_vegetables: { unit: "servings of veg",  one: "serving of veg",      lbPerUnit: 0.5 },
+  sweet_corn_cut:       { unit: "ears of corn",        one: "ear of corn",         lbPerUnit: 0.5 },
+  sweet_corn_cob:       { unit: "ears of corn",        one: "ear of corn",         lbPerUnit: 0.7 },
+  beans_green:          { unit: "servings of green beans", one: "serving of green beans", lbPerUnit: 0.5 },
+  peas_green:           { unit: "servings of peas",    one: "serving of peas",     lbPerUnit: 0.5 },
+  carrots:              { unit: "servings of carrots", one: "serving of carrots",  lbPerUnit: 0.5 },
+  spinach:              { unit: "servings of spinach", one: "serving of spinach",  lbPerUnit: 0.5 },
+  broccoli:             { unit: "servings of broccoli", one: "serving of broccoli", lbPerUnit: 0.5 },
+  total_frozen_potatoes: { unit: "bags of fries",      one: "bag of fries",        lbPerUnit: 2 },
+};
 
-  const latest = snapshots[snapshots.length - 1];
-  const latestVal = latest.commodities[commodity];
-  if (!latestVal) return "";
-
-  // Rule 1: all-time extreme (requires ≥ 12 months)
-  if (snapshots.length >= 12) {
-    const vals = snapshots.map((s) => s.commodities[commodity] || 0).filter((v) => v > 0);
-    const maxVal = Math.max(...vals);
-    const minVal = Math.min(...vals);
-    const monthsBack = snapshots.length;
-    if (latestVal >= maxVal * 0.995) return `↑ Highest in ${Math.round(monthsBack / 12)}+ years`;
-    if (latestVal <= minVal * 1.005) return `↓ Lowest in ${Math.round(monthsBack / 12)}+ years`;
-  }
-
-  // Rule 2: year-over-year shock (requires ≥ 13 months)
-  if (snapshots.length >= 13) {
-    const yearAgo = snapshots[snapshots.length - 13]?.commodities[commodity];
-    if (yearAgo) {
-      const yoy = ((latestVal - yearAgo) / yearAgo) * 100;
-      if (Math.abs(yoy) >= 15) {
-        const sign = yoy > 0 ? "↑ Up" : "↓ Down";
-        return `${sign} ${Math.abs(Math.round(yoy))}% from last year`;
-      }
-    }
-  }
-
-  // Rule 3: per-capita object equivalence
-  const recipe = INSIGHT_RECIPES[commodity];
+/**
+ * Per-capita equivalence badge text. Three rungs so every commodity gets one:
+ * a count per American when it's ≥ ~1, an inverted "1 X per N Americans"
+ * when the count is small, and plain lb/person as the last resort.
+ */
+function equivalenceText(key, thousandLb) {
+  const lb = thousandLb * 1000;
+  const recipe = INSIGHT_RECIPES[key];
   if (recipe) {
-    const lb = latestVal * 1000;
-    const perAmerican = lb / US_POPULATION / recipe.lbPerUnit;
-    if (perAmerican >= 0.1) {
-      const formatted = perAmerican >= 10
-        ? Math.round(perAmerican).toLocaleString("en-US")
-        : (Math.round(perAmerican * 10) / 10).toLocaleString("en-US");
-      return `≈ ${formatted} ${recipe.unit} / American`;
-    }
+    const per = lb / US_POPULATION / recipe.lbPerUnit;
+    if (per >= 0.75) return `≈ ${formatPerCapitaCount(per)} ${recipe.unit} / American`;
+    const people = Math.round(1 / per);
+    if (people <= 1000) return `≈ 1 ${recipe.one} per ${people} Americans`;
   }
-
+  const perLb = lb / US_POPULATION;
+  if (perLb >= 0.05) return `≈ ${formatPerCapitaCount(perLb)} lb / American`;
   return "";
 }
 
-function renderInsightBadges(data) {
-  const badges = [
-    { id: "insight-butter",  key: "butter" },
-    { id: "insight-poultry", key: "total_frozen_poultry" },
-  ];
-  for (const { id, key } of badges) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    el.textContent = computeInsight(key, data.archive);
+/** Sentence form of the same equivalence, for the detail modal. */
+function equivalenceSentence(key, thousandLb) {
+  const lb = thousandLb * 1000;
+  const recipe = INSIGHT_RECIPES[key];
+  if (recipe) {
+    const per = lb / US_POPULATION / recipe.lbPerUnit;
+    if (per >= 0.75) {
+      return `America is holding <strong>≈ ${formatPerCapitaCount(per)} ${recipe.unit}</strong> for every single person in the country.`;
+    }
+    const people = Math.round(1 / per);
+    if (people <= 1000) {
+      return `America is holding about <strong>one ${recipe.one} for every ${people} people</strong> in the country.`;
+    }
   }
+  const perLb = lb / US_POPULATION;
+  if (perLb >= 0.05) {
+    return `That works out to <strong>≈ ${formatPerCapitaCount(perLb)} lb per American</strong>.`;
+  }
+  return "";
 }
 
 // Non-overlapping keys used for the grand total.
@@ -199,7 +252,7 @@ const GRAND_TOTAL_KEYS = [
 const categoryDefinitions = {
   all: {
     title: "Total cold storage — all categories",
-    rankingNote: "Sorted by latest storage volume across all categories",
+    rankingNote: "Base commodities only — no double counting",
     aggregateKeys: GRAND_TOTAL_KEYS,
   },
   dairy: {
@@ -238,9 +291,10 @@ const formatCompact = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-function formatPounds(thousandLb) {
-  return `${formatCompact.format(thousandLb * 1000)} lb`;
-}
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function formatPercent(value) {
   const rounded = Math.round(value * 10) / 10;
@@ -251,6 +305,38 @@ function formatPercent(value) {
 function calculateChange(from, to) {
   if (!from) return 0;
   return ((to - from) / from) * 100;
+}
+
+function shortMonthYear(isoDate) {
+  const d = new Date(isoDate + "T12:00:00Z");
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+function formatPerCapitaCount(perAmerican) {
+  if (perAmerican >= 10) return Math.round(perAmerican).toLocaleString("en-US");
+  if (perAmerican >= 1) return (Math.round(perAmerican * 10) / 10).toLocaleString("en-US");
+  return (Math.round(perAmerican * 100) / 100).toLocaleString("en-US");
+}
+
+/**
+ * Headline number formatting that honours the global per-American toggle.
+ * Returns { num, unit } strings.
+ */
+function formatHeadlineValue(key, thousandLb) {
+  const lb = thousandLb * 1000;
+  if (state.perCapita) {
+    const recipe = INSIGHT_RECIPES[key];
+    if (recipe) {
+      const per = lb / US_POPULATION / recipe.lbPerUnit;
+      // Below half a unit the equivalence stops being evocative ("0.06
+      // turkeys") — plain pounds per person reads better.
+      if (per >= 0.5) {
+        return { num: formatPerCapitaCount(per), unit: `${recipe.unit} / American` };
+      }
+    }
+    return { num: formatPerCapitaCount(lb / US_POPULATION), unit: "lb / American" };
+  }
+  return { num: formatCompact.format(lb), unit: "lb" };
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +367,19 @@ function getYearAgoSnapshot(archive) {
     }
   }
   return closest;
+}
+
+/**
+ * Most recent month with a real value for this key.
+ * Returns { value, date, monthsStale } or null if the key has no data at all.
+ */
+function lastKnown(archive, key) {
+  const snaps = archive.snapshots;
+  for (let i = snaps.length - 1; i >= 0; i--) {
+    const v = snaps[i].commodities[key];
+    if (v) return { value: v, date: snaps[i].observationDate, monthsStale: snaps.length - 1 - i };
+  }
+  return null;
 }
 
 /**
@@ -354,20 +453,116 @@ function buildAggregateSeries(data) {
 }
 
 /**
- * Return the last nMonths values (1000 lb) for a given commodity key from the archive.
+ * Last nMonths values (1000 lb) for a commodity. Missing months come back as
+ * null — they render as gaps, never as zero.
  */
 function buildSparklineSeries(archive, commodityKey, nMonths = 60) {
   const snapshots = archive.snapshots.slice(-nMonths);
-  return snapshots.map((s) => s.commodities[commodityKey] || 0);
+  return snapshots.map((s) => s.commodities[commodityKey] || null);
 }
 
 /**
- * Aggregate sparkline for a category using non-overlapping keys.
+ * Aggregate sparkline for a category. A month missing any component key is
+ * null — a partial sum would draw a false dip.
  */
 function buildCategorySparkline(archive, filter, nMonths = 60) {
   const keys = categoryDefinitions[filter]?.aggregateKeys || GRAND_TOTAL_KEYS;
   const snapshots = archive.snapshots.slice(-nMonths);
-  return snapshots.map((s) => keys.reduce((sum, k) => sum + (s.commodities[k] || 0), 0));
+  return snapshots.map((s) => {
+    let sum = 0;
+    for (const k of keys) {
+      const v = s.commodities[k];
+      if (!v) return null;
+      sum += v;
+    }
+    return sum;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Seasonality math
+// ---------------------------------------------------------------------------
+/**
+ * Average seasonal profile: for each calendar month, the mean of all observed
+ * values, expressed as % of the commodity's overall mean (100 = average).
+ */
+function seasonalIndex(archive, key) {
+  const byMonth = Array.from({ length: 12 }, () => []);
+  const all = [];
+  for (const s of archive.snapshots) {
+    const v = s.commodities[key];
+    if (!v) continue;
+    const m = new Date(s.observationDate + "T12:00:00Z").getUTCMonth();
+    byMonth[m].push(v);
+    all.push(v);
+  }
+  if (all.length < 18) return null; // not enough history for a seasonal read
+  const overall = all.reduce((a, b) => a + b, 0) / all.length;
+  return byMonth.map((vals) =>
+    vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length / overall) * 100 : null,
+  );
+}
+
+function peakTroughMonths(index) {
+  let peak = -1, trough = -1;
+  for (let m = 0; m < 12; m++) {
+    if (index[m] == null) continue;
+    if (peak === -1 || index[m] > index[peak]) peak = m;
+    if (trough === -1 || index[m] < index[trough]) trough = m;
+  }
+  return { peak, trough };
+}
+
+// ---------------------------------------------------------------------------
+// Records math
+// ---------------------------------------------------------------------------
+function archiveExtreme(archive, key, kind) {
+  let best = null;
+  for (const s of archive.snapshots) {
+    const v = s.commodities[key];
+    if (!v) continue;
+    if (!best || (kind === "max" ? v > best.value : v < best.value)) {
+      best = { value: v, date: s.observationDate };
+    }
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------
+// Insights
+// ---------------------------------------------------------------------------
+function computeInsight(commodity, archive) {
+  const snapshots = archive.snapshots;
+  if (!snapshots.length) return "";
+
+  const known = lastKnown(archive, commodity);
+  if (!known) return "";
+  const latestVal = known.value;
+
+  // Rule 1: all-time extreme (requires ≥ 12 months)
+  if (snapshots.length >= 12 && known.monthsStale === 0) {
+    const vals = snapshots.map((s) => s.commodities[commodity] || 0).filter((v) => v > 0);
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    const monthsBack = snapshots.length;
+    if (latestVal >= maxVal * 0.995) return `↑ Highest in ${Math.round(monthsBack / 12)}+ years`;
+    if (latestVal <= minVal * 1.005) return `↓ Lowest in ${Math.round(monthsBack / 12)}+ years`;
+  }
+
+  // Rule 2: year-over-year shock (requires ≥ 13 months)
+  if (snapshots.length >= 13 && known.monthsStale === 0) {
+    const yearAgo = snapshots[snapshots.length - 13]?.commodities[commodity];
+    if (yearAgo) {
+      const yoy = ((latestVal - yearAgo) / yearAgo) * 100;
+      if (Math.abs(yoy) >= 15) {
+        const sign = yoy > 0 ? "↑ Up" : "↓ Down";
+        return `${sign} ${Math.abs(Math.round(yoy))}% from last year`;
+      }
+    }
+  }
+
+  // Rule 3: per-capita object equivalence (every commodity gets one)
+  return equivalenceText(commodity, latestVal);
 }
 
 // ---------------------------------------------------------------------------
@@ -384,6 +579,7 @@ function animateNumber(el, rawValue, formatter = formatCompact.format.bind(forma
 
   const duration = 900;
   const start = performance.now();
+  let settled = false;
 
   function frame(now) {
     const progress = Math.min((now - start) / duration, 1);
@@ -391,9 +587,16 @@ function animateNumber(el, rawValue, formatter = formatCompact.format.bind(forma
     const value = rawValue * eased;
     el.textContent = formatter(value);
     if (progress < 1) requestAnimationFrame(frame);
+    else settled = true;
   }
 
   requestAnimationFrame(frame);
+
+  // rAF is throttled (or paused entirely) in background tabs — make sure the
+  // real number lands even if the animation never gets to run.
+  setTimeout(() => {
+    if (!settled) el.textContent = finalValue;
+  }, duration + 200);
 }
 
 function estimatedNextReleaseLabel(today = new Date()) {
@@ -405,10 +608,13 @@ function estimatedNextReleaseLabel(today = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
-// Sparkline canvas renderer
+// Sparkline canvas renderer — null-aware: missing months render as gaps
 // ---------------------------------------------------------------------------
-function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5, hoverIdx = null } = {}) {
-  if (!values || values.length < 2) return;
+function drawSparkline(canvas, values, {
+  lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5,
+  hoverIdx = null, annotations = [],
+} = {}) {
+  if (!values || values.filter((v) => v != null).length < 2) return;
 
   const dpr = window.devicePixelRatio || 1;
   const cssW = canvas.offsetWidth || 320;
@@ -422,46 +628,79 @@ function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const valid = values.filter((v) => v != null);
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
   const range = max - min || 1;
 
-  const pts = values.map((v, i) => ({
+  const pts = values.map((v, i) => v == null ? null : ({
     x: padding + (i / (values.length - 1)) * (cssW - padding * 2),
     y: cssH - padding - ((v - min) / range) * (cssH - padding * 2),
   }));
 
-  // Filled area
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, cssH - padding);
-  pts.forEach((p) => ctx.lineTo(p.x, p.y));
-  ctx.lineTo(pts[pts.length - 1].x, cssH - padding);
-  ctx.closePath();
-  ctx.fillStyle = hexToRgba(lineColor, fillOpacity);
-  ctx.fill();
+  // Split into contiguous segments around gaps
+  const segments = [];
+  let current = [];
+  for (const p of pts) {
+    if (p) current.push(p);
+    else if (current.length) { segments.push(current); current = []; }
+  }
+  if (current.length) segments.push(current);
 
-  // Line
-  ctx.beginPath();
-  pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth = lineWidth;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.stroke();
+  for (const seg of segments) {
+    if (seg.length === 1) {
+      // isolated point — draw a small dot so the month isn't invisible
+      ctx.beginPath();
+      ctx.arc(seg[0].x, seg[0].y, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(lineColor, 0.7);
+      ctx.fill();
+      continue;
+    }
+    // Filled area
+    ctx.beginPath();
+    ctx.moveTo(seg[0].x, cssH - padding);
+    seg.forEach((p) => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(seg[seg.length - 1].x, cssH - padding);
+    ctx.closePath();
+    ctx.fillStyle = hexToRgba(lineColor, fillOpacity);
+    ctx.fill();
+    // Line
+    ctx.beginPath();
+    seg.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+
+  // Annotation markers: small open rings on the line
+  for (const a of annotations) {
+    const p = pts[a.idx];
+    if (!p) continue;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor;
+    ctx.fill();
+  }
 
   // Latest point dot (hidden when hovering)
-  if (hoverIdx === null) {
-    const last = pts[pts.length - 1];
+  const lastPt = [...pts].reverse().find((p) => p);
+  if (hoverIdx === null && lastPt) {
     ctx.beginPath();
-    ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+    ctx.arc(lastPt.x, lastPt.y, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = lineColor;
     ctx.fill();
   }
 
   // Hover indicator: vertical hairline + dot
-  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < pts.length) {
+  if (hoverIdx !== null && pts[hoverIdx]) {
     const hp = pts[hoverIdx];
-    // Hairline
     ctx.beginPath();
     ctx.moveTo(hp.x, padding);
     ctx.lineTo(hp.x, cssH - padding);
@@ -470,12 +709,10 @@ function drawSparkline(canvas, values, { lineColor = "#ffffff", fillOpacity = 0.
     ctx.setLineDash([3, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
-    // Outer dot
     ctx.beginPath();
     ctx.arc(hp.x, hp.y, 5.5, 0, Math.PI * 2);
     ctx.fillStyle = lineColor;
     ctx.fill();
-    // Inner dot
     ctx.beginPath();
     ctx.arc(hp.x, hp.y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = hexToRgba(lineColor, 0.35);
@@ -490,12 +727,20 @@ function hexToRgba(hex, opacity) {
   return `rgba(${r},${g},${b},${opacity})`;
 }
 
+/** Snap a clientX to the nearest index that actually has data. */
+function nearestDataIdx(values, rawIdx) {
+  if (values[rawIdx] != null) return rawIdx;
+  for (let d = 1; d < values.length; d++) {
+    if (values[rawIdx - d] != null) return rawIdx - d;
+    if (values[rawIdx + d] != null) return rawIdx + d;
+  }
+  return rawIdx;
+}
+
 // ---------------------------------------------------------------------------
 // Narrative slab copy generator
 // ---------------------------------------------------------------------------
 function buildNarrativeCopy(data, filter) {
-  const agg = buildAggregateSeries(data);
-
   if (filter === "dairy") {
     const butterLb = data.commodities.butter.values.latest * 1000;
     const sticks = Math.round(butterLb / 0.25);
@@ -522,7 +767,7 @@ function buildNarrativeCopy(data, filter) {
   const grandTotalLb = grandTotal * 1000;
   const cargoShips = Math.round(grandTotalLb / 154_000_000); // ~70k DWT ship ≈ 154M lb
   const lbPerAmerican = Math.round(grandTotalLb / US_POPULATION);
-  return `The US cold chain holds <strong>${formatCompact.format(grandTotalLb)} lb</strong> of frozen food right now — about <strong>${lbPerAmerican} lb per American</strong>, or the equivalent cargo of roughly ${cargoShips} fully loaded container ships.`;
+  return `Across these categories the US cold chain holds <strong>${formatCompact.format(grandTotalLb)} lb</strong> of frozen food right now — about <strong>${lbPerAmerican} lb per American</strong>, or the equivalent cargo of roughly ${cargoShips} fully loaded container ships.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -540,11 +785,16 @@ function renderHero(data) {
   const mom = calculateChange(grandPrev, grandLatest);
   const yoy = calculateChange(grandYear, grandLatest);
 
-  animateNumber(
-    document.getElementById("hero-value"),
-    grandLatest * 1000,
-    (v) => formatCompact.format(v),
-  );
+  const heroEl = document.getElementById("hero-value");
+  const heroUnitEl = document.getElementById("hero-unit");
+  if (state.perCapita) {
+    const perLb = (grandLatest * 1000) / US_POPULATION;
+    animateNumber(heroEl, perLb, (v) => Math.round(v).toLocaleString("en-US"));
+    if (heroUnitEl) heroUnitEl.textContent = "lb / American";
+  } else {
+    animateNumber(heroEl, grandLatest * 1000, (v) => formatCompact.format(v));
+    if (heroUnitEl) heroUnitEl.textContent = "lb";
+  }
 
   document.getElementById("hero-observation-date").textContent =
     `Reporting on ${new Date(latest.observationDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}`;
@@ -553,39 +803,94 @@ function renderHero(data) {
   document.getElementById("hero-yoy").textContent = formatPercent(yoy);
   document.getElementById("hero-yoy").className = `delta ${yoy >= 0 ? "delta--up" : "delta--down"}`;
 
-  // Butter stat tile
-  const butter = data.commodities.butter;
-  animateNumber(
-    document.getElementById("butter-value"),
-    butter.values.latest * 1000,
-    (v) => formatCompact.format(v),
-  );
-  const butterMom = calculateChange(butter.values.previousMonth, butter.values.latest);
-  const butterYoy = calculateChange(butter.values.yearAgo, butter.values.latest);
-  document.getElementById("butter-mom").textContent = formatPercent(butterMom);
-  document.getElementById("butter-mom").className = `delta ${butterMom >= 0 ? "delta--up" : "delta--down"}`;
-  document.getElementById("butter-yoy").textContent = formatPercent(butterYoy);
-  document.getElementById("butter-yoy").className = `delta ${butterYoy >= 0 ? "delta--up" : "delta--down"}`;
-
-  // Poultry stat tile
-  const poultry = data.commodities.total_frozen_poultry;
-  animateNumber(
-    document.getElementById("poultry-value"),
-    poultry.values.latest * 1000,
-    (v) => formatCompact.format(v),
-  );
-  const poultryMom = calculateChange(poultry.values.previousMonth, poultry.values.latest);
-  document.getElementById("poultry-mom").textContent = formatPercent(poultryMom);
-  document.getElementById("poultry-mom").className = `delta ${poultryMom >= 0 ? "delta--up" : "delta--down"}`;
-
-  // Release metadata
-  const publishIso = latest.releaseDate || data.meta.updated;
-  document.getElementById("release-date").textContent = publishIso
-    ? new Date(publishIso + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
-    : "—";
+  // Release metadata. If the snapshot doesn't carry its own release date,
+  // estimate it: cold storage for month M lands around the 22nd of M+1.
+  const releaseEl = document.getElementById("release-date");
+  if (latest.releaseDate) {
+    releaseEl.textContent = new Date(latest.releaseDate + "T12:00:00Z")
+      .toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  } else {
+    const obs = new Date(latest.observationDate + "T12:00:00Z");
+    const est = new Date(Date.UTC(obs.getUTCFullYear(), obs.getUTCMonth() + 1, 22));
+    releaseEl.textContent = `≈ ${est.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+  }
   document.getElementById("next-release").textContent = estimatedNextReleaseLabel();
   const reportLink = document.getElementById("report-link");
   if (reportLink && latest.reportUrl) reportLink.href = latest.reportUrl;
+}
+
+// ---------------------------------------------------------------------------
+// Render: dynamic editorial tiles (fast mover + volume leader)
+// The headline copy is generated from the data so it can never go stale.
+// ---------------------------------------------------------------------------
+function pickFastestMover(data) {
+  let best = null;
+  for (const key of Object.keys(COMMODITY_LABELS)) {
+    const c = data.commodities[key];
+    if (!c || !c.values.latest || !c.values.previousMonth) continue;
+    const mom = calculateChange(c.values.previousMonth, c.values.latest);
+    if (!best || Math.abs(mom) > Math.abs(best.mom)) {
+      best = { key, mom, yoy: calculateChange(c.values.yearAgo, c.values.latest), values: c.values };
+    }
+  }
+  return best;
+}
+
+function pickVolumeLeader(data) {
+  let best = null;
+  for (const key of LEADER_KEYS) {
+    const c = data.commodities[key];
+    if (!c || !c.values.latest) continue;
+    if (!best || c.values.latest > best.values.latest) {
+      best = { key, values: c.values, mom: calculateChange(c.values.previousMonth, c.values.latest) };
+    }
+  }
+  return best;
+}
+
+function moverHeadline(label, mom, yoy) {
+  if (mom >= 8)  return `${label} is piling up.`;
+  if (mom > 0 && yoy < 0) return `${label} snapped back.`;
+  if (mom > 0)  return `${label} keeps climbing.`;
+  if (mom <= -8) return `${label} is draining fast.`;
+  return `${label} slipped.`;
+}
+
+function renderEditorialTiles(data) {
+  const mover = pickFastestMover(data);
+  const leader = pickVolumeLeader(data);
+
+  if (mover) {
+    const label = labelFor(mover.key).replace(/^Total /, "").replace(/^./, (c) => c.toUpperCase());
+    document.getElementById("mover-title").textContent = moverHeadline(label, mover.mom, mover.yoy);
+    const fmt = formatHeadlineValue(mover.key, mover.values.latest);
+    document.getElementById("mover-value").textContent = fmt.num;
+    document.getElementById("mover-unit").textContent = `${fmt.unit} in storage`;
+    const momEl = document.getElementById("mover-mom");
+    momEl.textContent = formatPercent(mover.mom);
+    momEl.className = `delta ${mover.mom >= 0 ? "delta--up" : "delta--down"}`;
+    const yoyEl = document.getElementById("mover-yoy");
+    yoyEl.textContent = formatPercent(mover.yoy);
+    yoyEl.className = `delta ${mover.yoy >= 0 ? "delta--up" : "delta--down"}`;
+    const badge = document.getElementById("insight-mover");
+    if (badge) badge.textContent = computeInsight(mover.key, data.archive);
+  }
+
+  if (leader) {
+    const label = labelFor(leader.key).replace(/^Total /, "");
+    const verb = /(vegetables|potatoes|bellies)$/i.test(label) ? "hold" : "holds";
+    document.getElementById("leader-title").textContent =
+      `${label.replace(/^./, (c) => c.toUpperCase())} ${verb} the most ground.`;
+    const fmt = formatHeadlineValue(leader.key, leader.values.latest);
+    document.getElementById("leader-value").textContent = fmt.num;
+    document.getElementById("leader-unit").textContent =
+      state.perCapita ? fmt.unit : `lb of ${/frozen/i.test(label) ? "" : "frozen "}${label.toLowerCase()}`;
+    const momEl = document.getElementById("leader-mom");
+    momEl.textContent = formatPercent(leader.mom);
+    momEl.className = `delta ${leader.mom >= 0 ? "delta--up" : "delta--down"}`;
+    const badge = document.getElementById("insight-leader");
+    if (badge) badge.textContent = computeInsight(leader.key, data.archive);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -609,7 +914,7 @@ function renderCave(data) {
       const width = 52 + (latest / max) * 48;
       const delay = index * 0.6;
       return `
-        <div class="cave-layer cave-layer--${item.className}" style="width:${width}%; animation-delay:${delay}s;">
+        <div class="cave-layer cave-layer--${item.className}" style="width:${width}%; animation-delay:${delay}s;" data-commodity-key="${item.key}" role="button" tabindex="0" aria-label="${item.label}: ${formatCompact.format(latest * 1000)} lb — open detail">
           <div class="cave-layer-label">
             <span>${item.label}</span>
             <span>${formatCompact.format(latest * 1000)} lb</span>
@@ -629,8 +934,34 @@ function renderNarrative(data, filter) {
 }
 
 // ---------------------------------------------------------------------------
-// Render: chart strip (5-year trend sparkline)
+// Render: chart strip (5-year trend sparkline) with event annotations
 // ---------------------------------------------------------------------------
+function buildTrendAnnotations(values, dates, filter) {
+  const annotations = [];
+
+  // Curated events (only when relevant to the active filter)
+  for (const ev of TREND_EVENTS) {
+    if (!ev.filters.includes(filter)) continue;
+    const idx = dates.findIndex((d) => d.startsWith(ev.month));
+    if (idx >= 0 && values[idx] != null) annotations.push({ idx, label: ev.label });
+  }
+
+  // Data-derived: 5-year high and low of the displayed series
+  let maxIdx = -1, minIdx = -1;
+  values.forEach((v, i) => {
+    if (v == null) return;
+    if (maxIdx === -1 || v > values[maxIdx]) maxIdx = i;
+    if (minIdx === -1 || v < values[minIdx]) minIdx = i;
+  });
+  if (maxIdx >= 0 && !annotations.some((a) => a.idx === maxIdx)) {
+    annotations.push({ idx: maxIdx, label: "5-year high" });
+  }
+  if (minIdx >= 0 && !annotations.some((a) => a.idx === minIdx)) {
+    annotations.push({ idx: minIdx, label: "5-year low" });
+  }
+  return annotations;
+}
+
 function renderChartStrip(data, filter) {
   const canvas = document.getElementById("trend-canvas");
   const label = document.getElementById("trend-label");
@@ -639,7 +970,7 @@ function renderChartStrip(data, filter) {
 
   const values = buildCategorySparkline(data.archive, filter, 60);
 
-  if (values.length < 2) {
+  if (values.filter((v) => v != null).length < 2) {
     canvas.style.display = "none";
     if (label) label.textContent = "Historical archive building…";
     if (monthCount) monthCount.textContent = "Run scripts/fetch-usda.py --backfill 60 to populate";
@@ -650,13 +981,17 @@ function renderChartStrip(data, filter) {
 
   const catDef = categoryDefinitions[filter];
   if (label) label.textContent = catDef?.title || "Total cold storage trend";
-  if (monthCount) monthCount.textContent = `${values.length} monthly snapshots`;
+  if (monthCount) monthCount.textContent = `${values.filter((v) => v != null).length} monthly snapshots`;
 
   const snapshots = data.archive.snapshots.slice(-values.length);
   const dates = snapshots.map((s) => s.observationDate);
+  const annotations = buildTrendAnnotations(values, dates, filter);
 
-  const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2 };
+  const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, annotations };
   drawSparkline(canvas, values, opts);
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label",
+    `${catDef?.title || "Total cold storage"} — 5-year trend, latest ${formatCompact.format((values.findLast((v) => v != null) || 0) * 1000)} lb`);
   bindChartHover(canvas, values, dates, opts);
 }
 
@@ -664,23 +999,26 @@ function bindChartHover(canvas, values, dates, opts) {
   const tooltip = document.getElementById("chart-tooltip");
   if (!tooltip) return;
 
-  // Remove previous listeners
   if (canvas._hoverCleanup) { canvas._hoverCleanup(); }
 
   const dateEl = tooltip.querySelector(".chart-tooltip-date");
   const valueEl = tooltip.querySelector(".chart-tooltip-value");
+  const noteEl = tooltip.querySelector(".chart-tooltip-note");
   const padding = opts.padding ?? 12;
   const n = values.length;
+  const annotations = opts.annotations || [];
 
   function getIdx(clientX) {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const step = (rect.width - padding * 2) / (n - 1);
-    return Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    return nearestDataIdx(values, raw);
   }
 
   function onMove(e) {
     const idx = getIdx(e.clientX);
+    if (values[idx] == null) return;
     drawSparkline(canvas, values, { ...opts, hoverIdx: idx });
 
     const rect = canvas.getBoundingClientRect();
@@ -692,9 +1030,10 @@ function bindChartHover(canvas, values, dates, opts) {
     tooltip.style.transform = xPct > 72 ? "translateX(-92%)" : "translateX(-8%)";
     tooltip.classList.add("chart-tooltip--visible");
 
-    const d = new Date(dates[idx] + "T12:00:00Z");
-    dateEl.textContent = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    dateEl.textContent = shortMonthYear(dates[idx]);
     valueEl.textContent = formatCompact.format(values[idx] * 1000) + " lb";
+    const note = annotations.find((a) => Math.abs(a.idx - idx) <= 0);
+    if (noteEl) noteEl.textContent = note ? note.label : "";
   }
 
   function onLeave() {
@@ -702,11 +1041,13 @@ function bindChartHover(canvas, values, dates, opts) {
     tooltip.classList.remove("chart-tooltip--visible");
   }
 
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseleave", onLeave);
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerdown", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
   canvas._hoverCleanup = () => {
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseleave", onLeave);
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerdown", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
   };
 }
 
@@ -725,12 +1066,10 @@ function getSparkTooltip() {
 }
 
 /**
- * Attach point-in-time hover to any canvas sparkline.
- * Redraws via drawSparkline with hoverIdx and follows the cursor with a single
- * shared floating tooltip. Stores canvas._hoverCleanup so re-renders don't stack.
+ * Attach point-in-time hover/touch scrubbing to any canvas sparkline.
  */
 function attachSparklineHover(canvas, values, dates, opts = {}) {
-  if (!canvas || !values || values.length < 2) return;
+  if (!canvas || !values || values.filter((v) => v != null).length < 2) return;
   if (canvas._hoverCleanup) canvas._hoverCleanup();
 
   const tooltip = getSparkTooltip();
@@ -743,18 +1082,18 @@ function attachSparklineHover(canvas, values, dates, opts = {}) {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const step = (rect.width - padding * 2) / (n - 1);
-    return Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    const raw = Math.max(0, Math.min(n - 1, Math.round((x - padding) / step)));
+    return nearestDataIdx(values, raw);
   }
 
   function onMove(e) {
     const idx = getIdx(e.clientX);
+    if (values[idx] == null) return;
     drawSparkline(canvas, values, { ...opts, hoverIdx: idx });
 
-    const d = new Date(dates[idx] + "T12:00:00Z");
-    dateEl.textContent = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    dateEl.textContent = shortMonthYear(dates[idx]);
     valueEl.textContent = formatCompact.format(values[idx] * 1000) + " lb";
 
-    // Position: above-right of cursor, flip near viewport edges
     tooltip.classList.add("spark-tooltip--visible");
     const tw = tooltip.offsetWidth;
     const th = tooltip.offsetHeight;
@@ -771,11 +1110,11 @@ function attachSparklineHover(canvas, values, dates, opts = {}) {
     tooltip.classList.remove("spark-tooltip--visible");
   }
 
-  canvas.addEventListener("mousemove", onMove);
-  canvas.addEventListener("mouseleave", onLeave);
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
   canvas._hoverCleanup = () => {
-    canvas.removeEventListener("mousemove", onMove);
-    canvas.removeEventListener("mouseleave", onLeave);
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
     tooltip.classList.remove("spark-tooltip--visible");
   };
 }
@@ -804,9 +1143,6 @@ function renderCompareGrid(data, filter) {
   const compareGrid = document.getElementById("compare-grid");
   const compareTitle = document.getElementById("compare-title");
   const series = getSeriesForFilter(data, filter);
-  const maxAcrossSeries = Math.max(
-    ...series.flatMap((item) => [item.values.yearAgo, item.values.previousMonth, item.values.latest]),
-  );
 
   compareTitle.textContent = categoryDefinitions[filter].title;
 
@@ -818,10 +1154,20 @@ function renderCompareGrid(data, filter) {
         { label: "Latest", key: "latest", className: "latest" },
       ];
 
+      // Zoom each row's bars to its own min→max range so small monthly
+      // movements are actually visible. Cross-row comparison lives in the
+      // ranking panel; this panel is about direction of change.
+      const rowVals = entries.map((e) => item.values[e.key]);
+      const rowMax = Math.max(...rowVals);
+      const rowMin = Math.min(...rowVals);
+      const rowRange = rowMax - rowMin;
+
       const bars = entries
         .map((entry) => {
           const value = item.values[entry.key];
-          const height = Math.max(16, (value / maxAcrossSeries) * 100);
+          const height = rowRange === 0
+            ? 100
+            : 22 + ((value - rowMin) / rowRange) * 78;
           return `
             <div class="compare-bar-wrap">
               <div class="compare-bar compare-bar--${entry.className}" style="height:${height}%"></div>
@@ -836,7 +1182,7 @@ function renderCompareGrid(data, filter) {
       const delta = calculateChange(item.values.previousMonth, item.values.latest);
 
       return `
-        <article class="compare-row">
+        <article class="compare-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
           <div class="compare-head">
             <p class="compare-name">${item.label}</p>
             <p class="compare-values">${formatPercent(delta)} vs last month</p>
@@ -853,12 +1199,23 @@ function renderCompareGrid(data, filter) {
 function renderRanking(data, filter) {
   const rankingList = document.getElementById("ranking-list");
   const rankingNote = document.getElementById("ranking-note");
-  const items = getSeriesForFilter(data, filter)
+
+  const source = filter === "all"
+    ? LEAF_KEYS.map((key) => ({
+        key,
+        label: data.commodities[key]?.label || labelFor(key),
+        values: data.commodities[key]?.values || { latest: 0, previousMonth: 0 },
+      }))
+    : getSeriesForFilter(data, filter);
+
+  const items = source
     .map((item) => ({
+      key: item.key,
       label: item.label,
       latest: item.values.latest,
       mom: calculateChange(item.values.previousMonth, item.values.latest),
     }))
+    .filter((item) => item.latest > 0)
     .sort((a, b) => b.latest - a.latest);
 
   const maxLatest = Math.max(...items.map((item) => item.latest));
@@ -868,13 +1225,14 @@ function renderRanking(data, filter) {
     .map((item) => {
       const width = (item.latest / maxLatest) * 100;
       const deltaClass = item.mom >= 0 ? "delta--up" : "delta--down";
+      const fmt = formatHeadlineValue(item.key, item.latest);
       return `
-        <article class="ranking-row">
+        <article class="ranking-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
           <p class="ranking-name">${item.label}</p>
           <div class="ranking-bar-shell">
             <div class="ranking-bar-fill" style="width:${width}%"></div>
           </div>
-          <p class="ranking-value">${formatCompact.format(item.latest * 1000)} lb</p>
+          <p class="ranking-value">${fmt.num} ${fmt.unit}</p>
           <p class="ranking-change ${deltaClass}">${formatPercent(item.mom)}</p>
         </article>`;
     })
@@ -898,29 +1256,31 @@ function renderThroughTime(data, filter = "all") {
     ? Object.keys(COMMODITY_LABELS)
     : Object.keys(COMMODITY_LABELS).filter((k) => COMMODITY_GROUPS[k] === filter);
 
-  const snapshots = data.archive.snapshots;
-
   grid.innerHTML = keys.map((key) => {
     const label = COMMODITY_LABELS[key];
     const group = COMMODITY_GROUPS[key];
-    const colors = TT_COLORS[group] || TT_COLORS.protein;
     const series = buildSparklineSeries(data.archive, key, 60);
-    const latest = series[series.length - 1] || 0;
-    const yearAgo = series.length >= 13 ? series[series.length - 13] : null;
-    const yoy = yearAgo ? ((latest - yearAgo) / yearAgo) * 100 : null;
+    const known = lastKnown(data.archive, key);
+    const latest = known ? known.value : 0;
+    // YoY against the same calendar month a year before the last known value
+    const lastIdx = series.length - 1 - (known ? known.monthsStale : 0);
+    const yearAgo = lastIdx >= 12 ? series[lastIdx - 12] : null;
+    const yoy = yearAgo && latest ? ((latest - yearAgo) / yearAgo) * 100 : null;
     const yoyText = yoy !== null ? `${yoy >= 0 ? "+" : ""}${Math.round(yoy)}% YoY` : "";
+    const asOf = known && known.monthsStale > 0 ? ` · as of ${shortMonthYear(known.date)}` : "";
     const canvasId = `tt-canvas-${key}`;
+    const fmt = formatHeadlineValue(key, latest);
 
     return `
-      <div class="sparkline-tile sparkline-tile--${group}">
+      <div class="sparkline-tile sparkline-tile--${group}" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${label}: ${fmt.num} ${fmt.unit} — open detail">
         <div class="sparkline-tile-top">
           <p class="sparkline-tile-label">${label}</p>
-          <p class="sparkline-tile-value">${formatCompact.format(latest * 1000)}</p>
+          <p class="sparkline-tile-value">${fmt.num}${state.perCapita ? `<span class="sparkline-tile-percap"> ${fmt.unit}</span>` : ""}</p>
         </div>
         <div class="sparkline-tile-canvas-wrap">
-          <canvas class="sparkline-tile-canvas" id="${canvasId}" aria-label="${label} 5-year trend"></canvas>
+          <canvas class="sparkline-tile-canvas" id="${canvasId}" role="img" aria-label="${label} 5-year trend, latest ${formatCompact.format(latest * 1000)} lb"></canvas>
         </div>
-        ${yoyText ? `<p class="sparkline-tile-yoy">${yoyText}</p>` : ""}
+        ${yoyText || asOf ? `<p class="sparkline-tile-yoy">${yoyText}${asOf}</p>` : ""}
       </div>`;
   }).join("");
 
@@ -932,7 +1292,7 @@ function renderThroughTime(data, filter = "all") {
       const group = COMMODITY_GROUPS[key];
       const colors = TT_COLORS[group] || TT_COLORS.protein;
       const series = buildSparklineSeries(data.archive, key, 60);
-      if (series.length >= 2) {
+      if (series.filter((v) => v != null).length >= 2) {
         const dates = data.archive.snapshots.slice(-series.length).map((s) => s.observationDate);
         const opts = { lineColor: colors.line, fillOpacity: 0.15, lineWidth: 1.5 };
         drawSparkline(canvas, series, opts);
@@ -944,42 +1304,151 @@ function renderThroughTime(data, filter = "all") {
 
 function bindThroughTimeFilters(data) {
   const pills = document.querySelectorAll("[data-tt-filter]");
-  let active = "all";
 
   function update(next) {
-    active = next;
-    pills.forEach((p) => p.classList.toggle("is-active", p.dataset.ttFilter === next));
+    state.ttFilter = next;
+    pills.forEach((p) => {
+      const active = p.dataset.ttFilter === next;
+      p.classList.toggle("is-active", active);
+      p.setAttribute("aria-pressed", String(active));
+    });
     renderThroughTime(data, next);
   }
 
   pills.forEach((p) => p.addEventListener("click", () => update(p.dataset.ttFilter)));
-  update(active);
+  update(state.ttFilter);
 }
 
 // ---------------------------------------------------------------------------
-// Render: Deep Cuts — gallery grid by category
+// Render: Seasonality — "The freezer has seasons"
 // ---------------------------------------------------------------------------
+function seasonalTileSvg(index, { currentMonth = null, lineColor = "#3456d1" } = {}) {
+  const W = 260, H = 110, padX = 10, padTop = 14, padBottom = 24;
+  const valid = index.filter((v) => v != null);
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
+  const range = max - min || 1;
+
+  const px = (m) => padX + (m / 11) * (W - padX * 2);
+  const py = (v) => H - padBottom - ((v - min) / range) * (H - padTop - padBottom);
+
+  let d = "";
+  index.forEach((v, m) => {
+    if (v == null) return;
+    d += (d === "" ? "M" : "L") + px(m).toFixed(1) + " " + py(v).toFixed(1) + " ";
+  });
+
+  const { peak, trough } = peakTroughMonths(index);
+
+  const monthTicks = MONTH_ABBR.map((abbr, m) =>
+    `<text x="${px(m).toFixed(1)}" y="${H - 8}" class="seasonal-month${m === currentMonth ? " seasonal-month--now" : ""}" text-anchor="middle">${abbr[0]}</text>`,
+  ).join("");
+
+  const nowBand = currentMonth != null
+    ? `<rect x="${(px(currentMonth) - 7).toFixed(1)}" y="${padTop - 6}" width="14" height="${H - padTop - padBottom + 12}" rx="7" class="seasonal-now-band"/>`
+    : "";
+
+  const peakDot = peak >= 0
+    ? `<circle cx="${px(peak).toFixed(1)}" cy="${py(index[peak]).toFixed(1)}" r="4" fill="${lineColor}"/>`
+    : "";
+  const troughDot = trough >= 0
+    ? `<circle cx="${px(trough).toFixed(1)}" cy="${py(index[trough]).toFixed(1)}" r="4" fill="none" stroke="${lineColor}" stroke-width="1.5"/>`
+    : "";
+
+  return `<svg viewBox="0 0 ${W} ${H}" class="seasonal-svg" aria-hidden="true">
+    ${nowBand}
+    <path d="${d.trim()}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${peakDot}${troughDot}${monthTicks}
+  </svg>`;
+}
+
+function renderSeasonality(data) {
+  const grid = document.getElementById("seasonality-grid");
+  const headline = document.getElementById("seasonality-now");
+  if (!grid) return;
+
+  const latest = getLatestSnapshot(data.archive);
+  const reportMonth = new Date(latest.observationDate + "T12:00:00Z").getUTCMonth();
+
+  // Dynamic "right now" line: biggest seasonal climber + faller for this month
+  let climber = null, faller = null;
+  for (const key of Object.keys(COMMODITY_LABELS)) {
+    const idx = seasonalIndex(data.archive, key);
+    if (!idx) continue;
+    const prev = idx[(reportMonth + 11) % 12];
+    const cur = idx[reportMonth];
+    if (prev == null || cur == null) continue;
+    const delta = cur - prev;
+    if (!climber || delta > climber.delta) climber = { key, delta };
+    if (!faller || delta < faller.delta) faller = { key, delta };
+  }
+  if (headline && climber && faller) {
+    const monthName = MONTH_NAMES[reportMonth];
+    headline.innerHTML =
+      `In a typical <strong>${monthName}</strong>, ` +
+      `<strong>${labelFor(climber.key).toLowerCase()}</strong> is building fastest ` +
+      `and <strong>${labelFor(faller.key).toLowerCase()}</strong> is drawing down hardest.`;
+  }
+
+  const keys = Object.keys(COMMODITY_LABELS);
+  grid.innerHTML = keys.map((key) => {
+    const idx = seasonalIndex(data.archive, key);
+    if (!idx) return "";
+    const group = COMMODITY_GROUPS[key];
+    const colors = TT_COLORS[group] || TT_COLORS.protein;
+    const { peak, trough } = peakTroughMonths(idx);
+    const swing = peak >= 0 && trough >= 0 ? Math.round(idx[peak] - idx[trough]) : 0;
+    const note = SEASONAL_NOTES[key]
+      || (peak >= 0 && trough >= 0
+        ? `Peaks in ${MONTH_NAMES[peak]} · lowest in ${MONTH_NAMES[trough]}.`
+        : "");
+    const swingClass = swing >= 30 ? "seasonal-swing--big" : swing >= 12 ? "seasonal-swing--mid" : "";
+
+    return `
+      <div class="seasonal-tile sparkline-tile--${group}" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${labelFor(key)} seasonal pattern — peaks in ${peak >= 0 ? MONTH_NAMES[peak] : "n/a"}, lowest in ${trough >= 0 ? MONTH_NAMES[trough] : "n/a"}">
+        <div class="seasonal-tile-top">
+          <p class="seasonal-tile-label">${labelFor(key)}</p>
+          ${swing ? `<span class="seasonal-swing ${swingClass}">±${swing}%</span>` : ""}
+        </div>
+        ${seasonalTileSvg(idx, { currentMonth: reportMonth, lineColor: colors.line })}
+        <p class="seasonal-tile-note">${note}</p>
+      </div>`;
+  }).join("");
+}
+
 // ---------------------------------------------------------------------------
-// Deep Cuts v2 render functions
+// Render: Deep Cuts
 // ---------------------------------------------------------------------------
 function renderDcTrackedTile(archive, key) {
-  const label = DEEP_CUT_LABELS[key] || COMMODITY_LABELS[key] || key;
-  const series = buildSparklineSeries(archive, key, 60);
-  const latest = series[series.length - 1] || 0;
+  const label = labelFor(key);
+  const known = lastKnown(archive, key);
   const canvasId = `dc-canvas-${key}`;
-  const hasData = latest > 0;
   const insight = computeInsight(key, archive);
+
+  if (!known) {
+    return `
+      <div class="dc-tile">
+        <div class="dc-tile-top">
+          <p class="dc-tile-label">${label}</p>
+          <p class="dc-tile-value" style="opacity:.3">—</p>
+        </div>
+        <p class="dc-tile-no-data">Not yet captured in this archive</p>
+      </div>`;
+  }
+
+  const fmt = formatHeadlineValue(key, known.value);
+  const asOf = known.monthsStale > 0
+    ? `<p class="dc-tile-asof">as of ${shortMonthYear(known.date)}</p>`
+    : "";
+
   return `
-    <div class="dc-tile">
+    <div class="dc-tile" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${label}: ${fmt.num} ${fmt.unit} — open detail">
       <div class="dc-tile-top">
         <p class="dc-tile-label">${label}</p>
-        ${hasData
-          ? `<p class="dc-tile-value">${formatCompact.format(latest * 1000)}<span class="dc-tile-unit"> lb</span></p>`
-          : `<p class="dc-tile-value" style="opacity:.3">—</p>`}
+        <p class="dc-tile-value">${fmt.num}<span class="dc-tile-unit"> ${fmt.unit}</span></p>
+        ${asOf}
       </div>
-      ${hasData && series.length >= 2
-        ? `<div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}"></canvas></div>`
-        : `<p class="dc-tile-no-data">No data for latest month</p>`}
+      <div class="dc-tile-canvas-wrap"><canvas class="dc-tile-canvas" id="${canvasId}" role="img" aria-label="${label} 5-year trend"></canvas></div>
       ${insight ? `<span class="insight-badge">${insight}</span>` : ""}
     </div>`;
 }
@@ -1004,15 +1473,53 @@ function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
     tracked.forEach((key) => {
       const canvas = document.getElementById(`dc-canvas-${key}`);
       if (!canvas) return;
-      const series = buildSparklineSeries(archive, key, 60);
-      if (series.length >= 2) {
-        const dates = archive.snapshots.slice(-series.length).map((s) => s.observationDate);
+      const known = lastKnown(archive, key);
+      let series = buildSparklineSeries(archive, key, 60);
+      // Trim trailing missing months so the line ends at the last real value
+      if (known && known.monthsStale > 0) series = series.slice(0, series.length - known.monthsStale);
+      if (series.filter((v) => v != null).length >= 2) {
+        const dates = archive.snapshots.slice(-buildSparklineSeries(archive, key, 60).length)
+          .map((s) => s.observationDate).slice(0, series.length);
         const opts = { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5, padding: 8 };
         drawSparkline(canvas, series, opts);
         attachSparklineHover(canvas, series, dates, opts);
       }
     });
   });
+}
+
+function renderFreezerRecords(archive) {
+  const container = document.getElementById("dc-records");
+  if (!container) return;
+
+  const cards = [];
+  for (const key of RECORD_KEYS) {
+    const hi = archiveExtreme(archive, key, "max");
+    const lo = archiveExtreme(archive, key, "min");
+    if (!hi || !lo) continue;
+    const known = lastKnown(archive, key);
+    const nearHigh = known && known.value >= hi.value * 0.97;
+    const nearLow = known && known.value <= lo.value * 1.03;
+    cards.push(`
+      <div class="record-card" data-commodity-key="${key}" role="button" tabindex="0">
+        <p class="record-card-label">${labelFor(key)}</p>
+        <div class="record-card-rows">
+          <div class="record-card-row">
+            <span class="record-kind record-kind--high">High</span>
+            <span class="record-value">${formatCompact.format(hi.value * 1000)} lb</span>
+            <span class="record-date">${shortMonthYear(hi.date)}</span>
+          </div>
+          <div class="record-card-row">
+            <span class="record-kind record-kind--low">Low</span>
+            <span class="record-value">${formatCompact.format(lo.value * 1000)} lb</span>
+            <span class="record-date">${shortMonthYear(lo.date)}</span>
+          </div>
+        </div>
+        ${nearHigh ? `<span class="insight-badge">Currently near its 5-year high</span>` : ""}
+        ${nearLow ? `<span class="insight-badge">Currently near its 5-year low</span>` : ""}
+      </div>`);
+  }
+  container.innerHTML = cards.join("");
 }
 
 function renderDeepCuts(data) {
@@ -1028,6 +1535,8 @@ function renderDeepCuts(data) {
         <p class="dc-curiosity-copy">${copy}</p>
       </div>`).join("");
   }
+
+  renderFreezerRecords(archive);
 
   // Mixed sections
   renderDcMixedSection(archive, "dc-meat-full",   DC_SECTIONS.meat);
@@ -1045,29 +1554,159 @@ function renderDeepCuts(data) {
 }
 
 // ---------------------------------------------------------------------------
-// Tab router (hash-based: #overview, #through-time, #deep-cuts)
+// Commodity detail modal
 // ---------------------------------------------------------------------------
+function openCommodityModal(key) {
+  const data = state.data;
+  if (!data || !labelFor(key)) return;
+  const archive = data.archive;
+  const known = lastKnown(archive, key);
+  if (!known) return;
+
+  state.modalKey = key;
+  const backdrop = document.getElementById("commodity-modal");
+  const body = document.getElementById("modal-body");
+  if (!backdrop || !body) return;
+
+  const label = labelFor(key);
+  const group = COMMODITY_GROUPS[key] || "other";
+  const series = buildSparklineSeries(archive, key, archive.snapshots.length);
+  const lastIdx = series.length - 1 - known.monthsStale;
+  const prev = lastIdx >= 1 ? series[lastIdx - 1] : null;
+  const yearAgo = lastIdx >= 12 ? series[lastIdx - 12] : null;
+  const mom = prev ? calculateChange(prev, known.value) : null;
+  const yoy = yearAgo ? calculateChange(yearAgo, known.value) : null;
+  const hi = archiveExtreme(archive, key, "max");
+  const lo = archiveExtreme(archive, key, "min");
+  const idx = seasonalIndex(archive, key);
+  const reportMonth = new Date(getLatestSnapshot(archive).observationDate + "T12:00:00Z").getUTCMonth();
+
+  const sentence = equivalenceSentence(key, known.value);
+  const equivalence = sentence ? `<p class="modal-equivalence">${sentence}</p>` : "";
+
+  const colors = TT_COLORS[group] || { line: "#3456d1" };
+
+  body.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">${group === "other" ? "Tracked commodity" : group === "protein" ? "Meat + poultry" : group} · ${shortMonthYear(known.date)}</p>
+        <h2 class="modal-title">${label}</h2>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close detail view">✕</button>
+    </div>
+    <div class="modal-hero-row">
+      <p class="modal-number">${formatCompact.format(known.value * 1000)}<span class="modal-number-unit"> lb</span></p>
+      <div class="modal-deltas">
+        ${mom !== null ? `<div><p class="mini-label">MoM</p><span class="delta ${mom >= 0 ? "delta--up" : "delta--down"}">${formatPercent(mom)}</span></div>` : ""}
+        ${yoy !== null ? `<div><p class="mini-label">YoY</p><span class="delta ${yoy >= 0 ? "delta--up" : "delta--down"}">${formatPercent(yoy)}</span></div>` : ""}
+      </div>
+    </div>
+    ${equivalence}
+    <div class="modal-chart-wrap">
+      <canvas id="modal-canvas" class="modal-canvas" role="img" aria-label="${label} full history"></canvas>
+    </div>
+    <div class="modal-meta-row">
+      ${hi ? `<div><p class="mini-label">Archive high</p><p class="modal-meta-value">${formatCompact.format(hi.value * 1000)} lb · ${shortMonthYear(hi.date)}</p></div>` : ""}
+      ${lo ? `<div><p class="mini-label">Archive low</p><p class="modal-meta-value">${formatCompact.format(lo.value * 1000)} lb · ${shortMonthYear(lo.date)}</p></div>` : ""}
+    </div>
+    ${idx ? `
+      <div class="modal-seasonal">
+        <p class="mini-label">Seasonal rhythm — average month vs the commodity's mean</p>
+        ${seasonalTileSvg(idx, { currentMonth: reportMonth, lineColor: colors.line })}
+        ${SEASONAL_NOTES[key] ? `<p class="seasonal-tile-note">${SEASONAL_NOTES[key]}</p>` : ""}
+      </div>` : ""}
+  `;
+
+  backdrop.hidden = false;
+  document.body.style.overflow = "hidden";
+
+  drawModalChart();
+  document.getElementById("modal-close").addEventListener("click", closeCommodityModal);
+  document.getElementById("modal-close").focus();
+}
+
+function drawModalChart() {
+  const key = state.modalKey;
+  if (!key || !state.data) return;
+  const canvas = document.getElementById("modal-canvas");
+  if (!canvas) return;
+  const archive = state.data.archive;
+  const known = lastKnown(archive, key);
+  let series = buildSparklineSeries(archive, key, archive.snapshots.length);
+  if (known && known.monthsStale > 0) series = series.slice(0, series.length - known.monthsStale);
+  const dates = archive.snapshots.map((s) => s.observationDate).slice(0, series.length);
+  const group = COMMODITY_GROUPS[key];
+  const colors = TT_COLORS[group] || { line: "#3456d1" };
+  const opts = { lineColor: colors.line, fillOpacity: 0.12, lineWidth: 2, padding: 12 };
+  drawSparkline(canvas, series, opts);
+  attachSparklineHover(canvas, series, dates, opts);
+}
+
+function closeCommodityModal() {
+  const backdrop = document.getElementById("commodity-modal");
+  if (!backdrop) return;
+  backdrop.hidden = true;
+  state.modalKey = null;
+  document.body.style.overflow = "";
+}
+
+function bindModal() {
+  const backdrop = document.getElementById("commodity-modal");
+  if (!backdrop) return;
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeCommodityModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.modalKey) closeCommodityModal();
+  });
+
+  // Delegated open: any element with data-commodity-key
+  document.addEventListener("click", (e) => {
+    const target = e.target.closest("[data-commodity-key]");
+    if (!target) return;
+    // Don't hijack canvas scrubbing inside the modal itself
+    if (target.closest("#commodity-modal")) return;
+    openCommodityModal(target.dataset.commodityKey);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const target = e.target.closest?.("[data-commodity-key]");
+    if (!target || target.closest("#commodity-modal")) return;
+    e.preventDefault();
+    openCommodityModal(target.dataset.commodityKey);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tab router (hash-based: #overview, #through-time, #seasonality, #deep-cuts)
+// ---------------------------------------------------------------------------
+const VALID_TABS = ["overview", "through-time", "seasonality", "deep-cuts"];
+
 function bindTabRouter(data) {
   const tabs = document.querySelectorAll(".tab-pill[data-tab]");
   const views = document.querySelectorAll(".view-section");
-  let ttInitialized = false;
-  let dcInitialized = false;
+  let ttBound = false;
 
   function activate(tabId) {
-    tabs.forEach((t) => t.classList.toggle("tab-pill--active", t.dataset.tab === tabId));
+    if (!VALID_TABS.includes(tabId)) tabId = "overview";
+    state.tab = tabId;
+    tabs.forEach((t) => {
+      const active = t.dataset.tab === tabId;
+      t.classList.toggle("tab-pill--active", active);
+      t.setAttribute("aria-selected", String(active));
+    });
     views.forEach((v) => {
       const matches = v.id === `view-${tabId}`;
       v.classList.toggle("view-section--hidden", !matches);
     });
 
-    if (tabId === "through-time" && !ttInitialized) {
-      bindThroughTimeFilters(data);
-      ttInitialized = true;
+    // Re-render the activated view so canvases pick up current size + state
+    if (tabId === "through-time") {
+      if (!ttBound) { bindThroughTimeFilters(data); ttBound = true; }
+      else renderThroughTime(data, state.ttFilter);
     }
-    if (tabId === "deep-cuts" && !dcInitialized) {
-      renderDeepCuts(data);
-      dcInitialized = true;
-    }
+    if (tabId === "seasonality") renderSeasonality(data);
+    if (tabId === "deep-cuts") renderDeepCuts(data);
   }
 
   tabs.forEach((tab) => {
@@ -1091,13 +1730,14 @@ function bindTabRouter(data) {
 // Filter binding (drives chart strip + narrative + comparison + ranking)
 // ---------------------------------------------------------------------------
 function bindFilters(data) {
-  const pills = document.querySelectorAll(".filter-pill");
-  let active = "all";
+  const pills = document.querySelectorAll(".filter-rail .filter-pill");
 
   function update(next) {
-    active = next;
+    state.overviewFilter = next;
     pills.forEach((pill) => {
-      pill.classList.toggle("is-active", pill.dataset.filter === next);
+      const active = pill.dataset.filter === next;
+      pill.classList.toggle("is-active", active);
+      pill.setAttribute("aria-pressed", String(active));
     });
     renderCompareGrid(data, next);
     renderRanking(data, next);
@@ -1109,7 +1749,46 @@ function bindFilters(data) {
     pill.addEventListener("click", () => update(pill.dataset.filter));
   });
 
-  update(active);
+  update(state.overviewFilter);
+}
+
+// ---------------------------------------------------------------------------
+// Per-American unit toggle
+// ---------------------------------------------------------------------------
+function bindUnitToggle(data) {
+  const toggle = document.getElementById("unit-toggle");
+  if (!toggle) return;
+  toggle.addEventListener("click", () => {
+    state.perCapita = !state.perCapita;
+    toggle.classList.toggle("is-active", state.perCapita);
+    toggle.setAttribute("aria-pressed", String(state.perCapita));
+    rerenderForState(data);
+  });
+}
+
+function rerenderForState(data) {
+  renderHero(data);
+  renderEditorialTiles(data);
+  renderRanking(data, state.overviewFilter);
+  if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
+  if (state.tab === "deep-cuts") renderDeepCuts(data);
+}
+
+// ---------------------------------------------------------------------------
+// Resize: charts re-render so canvases never go stale
+// ---------------------------------------------------------------------------
+function bindResize(data) {
+  let timer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (state.tab === "overview") renderChartStrip(data, state.overviewFilter);
+      if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
+      if (state.tab === "seasonality") renderSeasonality(data);
+      if (state.tab === "deep-cuts") renderDeepCuts(data);
+      if (state.modalKey) drawModalChart();
+    }, 150);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1119,11 +1798,15 @@ async function init() {
   const response = await fetch(DATA_URL);
   const archive = await response.json();
   const data = buildCompatData(archive);
+  state.data = data;
   renderHero(data);
+  renderEditorialTiles(data);
   renderCave(data);
-  renderInsightBadges(data);
   bindFilters(data);
   bindTabRouter(data);
+  bindUnitToggle(data);
+  bindModal();
+  bindResize(data);
 }
 
 init().catch((error) => {

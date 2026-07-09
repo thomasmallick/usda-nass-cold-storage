@@ -4,8 +4,8 @@
     {
       "name": "cold-storage",
       "runtimeExecutable": "/opt/homebrew/bin/python3",
-      "runtimeArgs": ["-m", "http.server", "4322", "--directory", "/Users/thomasmallick/Library/Mobile Documents/com~apple~CloudDocs/Projects/cold-storage"],
-      "port": 4322
+      "runtimeArgs": ["-m", "http.server", "4323", "--directory", "/Users/thomasmallick/Library/Mobile Documents/com~apple~CloudDocs/Projects/cold-storage"],
+      "port": 4323
     }
   ]
 }

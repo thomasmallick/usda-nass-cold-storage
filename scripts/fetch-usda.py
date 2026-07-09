@@ -6,6 +6,7 @@ Usage:
   USDA_API_KEY=xxx python scripts/fetch-usda.py              # fetch latest month
   USDA_API_KEY=xxx python scripts/fetch-usda.py --backfill 60
   USDA_API_KEY=xxx python scripts/fetch-usda.py --month 2025-06
+  USDA_API_KEY=xxx python scripts/fetch-usda.py --repair     # fill missing keys in existing snapshots
   USDA_API_KEY=xxx python scripts/fetch-usda.py --explore BUTTER
 
 Confirmed USDA Quick Stats cold storage schema (verified via get_param_values):
@@ -277,18 +278,16 @@ def fetch_commodity_month(api_key: str, key: str, year: int, month: int) -> int 
         return lb // 1000
 
     if "aggregate_of" in cfg:
+        # All components or nothing: a partial sum is a wrong number, and wrong
+        # numbers are worse than gaps (this exact bug corrupted 2021–2023 once).
         total = 0
-        found = 0
         for short_desc in cfg["aggregate_of"]:
             lb = fetch_short_desc(api_key, short_desc, year, month)
-            if lb is not None:
-                total += lb
-                found += 1
             time.sleep(0.5)
-        if found == 0:
-            return None
-        if found < len(cfg["aggregate_of"]):
-            print(f"\n    NOTE [{key}]: only {found}/{len(cfg['aggregate_of'])} components found")
+            if lb is None:
+                print(f"\n    NOTE [{key}]: component missing ({short_desc[:40]}…) — skipping aggregate for this month")
+                return None
+            total += lb
         return total // 1000
 
     raise ValueError(f"COMMODITY_MAP[{key!r}] must have 'short_desc' or 'aggregate_of'")
@@ -391,6 +390,83 @@ def upsert_snapshot(archive: dict, observation_date: str, commodities: dict) -> 
     return True
 
 
+# Keys the dashboard headline views depend on. A monthly snapshot missing
+# more than 2 of these is treated as a failed fetch rather than committed.
+HEADLINE_KEYS = [
+    "butter", "american_cheese", "swiss_cheese", "other_natural_cheese",
+    "total_natural_cheese", "total_chicken", "total_turkey",
+    "total_frozen_poultry", "total_frozen_fruit", "total_frozen_vegetables",
+    "total_frozen_potatoes", "total_beef", "pork_bellies", "total_pork",
+    "total_frozen_red_meat",
+]
+
+
+def validate_snapshot(commodities: dict, prev_commodities: dict | None) -> list[str]:
+    """Sanity-check a freshly fetched month before it enters the archive.
+    Returns a list of human-readable problems (empty = valid)."""
+    problems: list[str] = []
+
+    present = [k for k in HEADLINE_KEYS if commodities.get(k)]
+    if len(present) < len(HEADLINE_KEYS) - 2:
+        missing = [k for k in HEADLINE_KEYS if not commodities.get(k)]
+        problems.append(f"only {len(present)}/{len(HEADLINE_KEYS)} headline keys present (missing: {', '.join(missing)})")
+
+    # Aggregates must be at least the sum of their stored components.
+    pairs = [
+        ("total_frozen_poultry", ["total_chicken", "total_turkey"]),
+        ("total_frozen_red_meat", ["total_beef", "total_pork"]),
+    ]
+    for agg, parts in pairs:
+        if commodities.get(agg) and all(commodities.get(p) for p in parts):
+            floor = sum(commodities[p] for p in parts) * 0.98
+            if commodities[agg] < floor:
+                problems.append(f"{agg} ({commodities[agg]}) is below the sum of its components ({floor:.0f}) — partial aggregate fetch")
+
+    # Month-over-month sanity: cold storage never halves or doubles in a month.
+    if prev_commodities:
+        for key in HEADLINE_KEYS:
+            cur, prev = commodities.get(key), prev_commodities.get(key)
+            if cur and prev:
+                ratio = cur / prev
+                if ratio > 1.6 or ratio < 0.4:
+                    problems.append(f"{key} moved {ratio:.2f}x month-over-month ({prev} → {cur}) — implausible")
+
+    return problems
+
+
+def repair_archive(api_key: str, archive: dict) -> bool:
+    """Fetch only the commodity keys missing (or zero) in existing snapshots
+    and merge them in, leaving present values untouched."""
+    gaps: list[tuple[int, str, int, int]] = []  # (snapshot idx, key, year, month)
+    for i, snap in enumerate(archive["snapshots"]):
+        date = datetime.date.fromisoformat(snap["observationDate"])
+        for key in COMMODITY_MAP:
+            if not snap["commodities"].get(key):
+                gaps.append((i, key, date.year, date.month))
+
+    if not gaps:
+        print("No gaps found — archive is complete.")
+        return False
+
+    print(f"Found {len(gaps)} missing month/commodity pairs. Repairing...")
+    changed = False
+    filled = 0
+    for n, (idx, key, year, month) in enumerate(gaps, 1):
+        val = fetch_commodity_month(api_key, key, year, month)
+        print(f"  [{n}/{len(gaps)}] {year}-{month:02d} {key}: "
+              f"{'%s (1000 lb)' % val if val is not None else 'not published'}")
+        if val is not None:
+            archive["snapshots"][idx]["commodities"][key] = val
+            changed = True
+            filled += 1
+            if filled % 10 == 0:
+                save_archive(archive)  # checkpoint
+        time.sleep(0.5)
+
+    print(f"Repair complete: filled {filled}/{len(gaps)} gaps.")
+    return changed
+
+
 # ---------------------------------------------------------------------------
 # Date helpers
 # ---------------------------------------------------------------------------
@@ -421,6 +497,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch USDA cold storage data.")
     parser.add_argument("--backfill", type=int, metavar="N", help="Fetch last N months")
     parser.add_argument("--month", metavar="YYYY-MM", help="Fetch a specific month")
+    parser.add_argument("--repair", action="store_true",
+                        help="Fetch only commodity values missing from existing snapshots")
     parser.add_argument(
         "--explore", metavar="COMMODITY_DESC",
         help="Print all STOCKS records for a commodity name (e.g. BUTTER, CHICKENS)",
@@ -436,7 +514,11 @@ def main() -> None:
     archive = load_archive()
     changed = False
 
-    if args.month:
+    if args.repair:
+        if repair_archive(api_key, archive):
+            changed = True
+
+    elif args.month:
         year, month = map(int, args.month.split("-"))
         print(f"Fetching {year}-{month:02d}...")
         commodities, obs_date = fetch_month(api_key, year, month)
@@ -470,6 +552,18 @@ def main() -> None:
             target_year, target_month = two_back.year, two_back.month
         print(f"Fetching latest available: {MONTH_PERIODS[target_month]} {target_year}...")
         commodities, obs_date = fetch_month(api_key, target_year, target_month)
+
+        # Don't let a bad API day write junk into production: validate the
+        # fresh month against the previous snapshot before committing it.
+        prev = archive["snapshots"][-1]["commodities"] if archive["snapshots"] else None
+        if find_snapshot_idx(archive, obs_date) is None:  # only gate brand-new months
+            problems = validate_snapshot(commodities, prev)
+            if problems:
+                print("VALIDATION FAILED — archive left untouched:", file=sys.stderr)
+                for p in problems:
+                    print(f"  - {p}", file=sys.stderr)
+                sys.exit(1)
+
         if upsert_snapshot(archive, obs_date, commodities):
             changed = True
 
