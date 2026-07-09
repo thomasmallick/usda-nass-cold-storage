@@ -291,6 +291,15 @@ const formatCompact = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+// Escape any string interpolated into innerHTML. Labels are currently
+// hardcoded, but archive JSON keys can fall through as labels — keep every
+// data-derived string inert.
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -617,8 +626,11 @@ function drawSparkline(canvas, values, {
   if (!values || values.filter((v) => v != null).length < 2) return;
 
   const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.offsetWidth || 320;
-  const cssH = canvas.offsetHeight || 80;
+  // Measure the wrapper, not the canvas: the canvas carries inline width/height
+  // from the previous draw, which would freeze it at a stale size after resize.
+  const wrap = canvas.parentElement;
+  const cssW = (wrap ? wrap.clientWidth : canvas.offsetWidth) || 320;
+  const cssH = (wrap ? wrap.clientHeight : canvas.offsetHeight) || 80;
   canvas.width = cssW * dpr;
   canvas.height = cssH * dpr;
   canvas.style.width = cssW + "px";
@@ -816,7 +828,18 @@ function renderHero(data) {
   }
   document.getElementById("next-release").textContent = estimatedNextReleaseLabel();
   const reportLink = document.getElementById("report-link");
-  if (reportLink && latest.reportUrl) reportLink.href = latest.reportUrl;
+  if (reportLink && latest.reportUrl) {
+    // Only accept https USDA links from the data file — a poisoned archive
+    // must not be able to plant a javascript: or off-site href.
+    try {
+      const url = new URL(latest.reportUrl);
+      if (url.protocol === "https:" && (url.hostname === "usda.gov" || url.hostname.endsWith(".usda.gov"))) {
+        reportLink.href = url.href;
+      }
+    } catch {
+      /* malformed URL — keep the hardcoded fallback href */
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1170,7 +1193,9 @@ function renderCompareGrid(data, filter) {
             : 22 + ((value - rowMin) / rowRange) * 78;
           return `
             <div class="compare-bar-wrap">
-              <div class="compare-bar compare-bar--${entry.className}" style="height:${height}%"></div>
+              <div class="compare-bar-zone">
+                <div class="compare-bar compare-bar--${entry.className}" style="height:${height}%"></div>
+              </div>
               <div class="compare-caption">
                 <strong>${entry.label}</strong>
                 <span>${formatCompact.format(value * 1000)} lb</span>
@@ -1184,7 +1209,7 @@ function renderCompareGrid(data, filter) {
       return `
         <article class="compare-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
           <div class="compare-head">
-            <p class="compare-name">${item.label}</p>
+            <p class="compare-name">${escapeHtml(item.label)}</p>
             <p class="compare-values">${formatPercent(delta)} vs last month</p>
           </div>
           <div class="compare-bars">${bars}</div>
@@ -1228,7 +1253,7 @@ function renderRanking(data, filter) {
       const fmt = formatHeadlineValue(item.key, item.latest);
       return `
         <article class="ranking-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
-          <p class="ranking-name">${item.label}</p>
+          <p class="ranking-name">${escapeHtml(item.label)}</p>
           <div class="ranking-bar-shell">
             <div class="ranking-bar-fill" style="width:${width}%"></div>
           </div>
@@ -1429,7 +1454,7 @@ function renderDcTrackedTile(archive, key) {
     return `
       <div class="dc-tile">
         <div class="dc-tile-top">
-          <p class="dc-tile-label">${label}</p>
+          <p class="dc-tile-label">${escapeHtml(label)}</p>
           <p class="dc-tile-value" style="opacity:.3">—</p>
         </div>
         <p class="dc-tile-no-data">Not yet captured in this archive</p>
@@ -1444,7 +1469,7 @@ function renderDcTrackedTile(archive, key) {
   return `
     <div class="dc-tile" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${label}: ${fmt.num} ${fmt.unit} — open detail">
       <div class="dc-tile-top">
-        <p class="dc-tile-label">${label}</p>
+        <p class="dc-tile-label">${escapeHtml(label)}</p>
         <p class="dc-tile-value">${fmt.num}<span class="dc-tile-unit"> ${fmt.unit}</span></p>
         ${asOf}
       </div>
@@ -1456,7 +1481,7 @@ function renderDcTrackedTile(archive, key) {
 function renderDcDiscoveryChip(name) {
   return `<div class="dc-chip" title="USDA tracks ${name}; no monthly series shown here">
       <p class="dc-chip-eyebrow">Also tracked</p>
-      <p class="dc-chip-name">${name}</p>
+      <p class="dc-chip-name">${escapeHtml(name)}</p>
       <span class="dc-chip-baseline" aria-hidden="true"></span>
       <p class="dc-chip-note">No monthly series</p>
     </div>`;
@@ -1590,7 +1615,7 @@ function openCommodityModal(key) {
     <div class="modal-head">
       <div>
         <p class="eyebrow">${group === "other" ? "Tracked commodity" : group === "protein" ? "Meat + poultry" : group} · ${shortMonthYear(known.date)}</p>
-        <h2 class="modal-title">${label}</h2>
+        <h2 class="modal-title">${escapeHtml(label)}</h2>
       </div>
       <button class="modal-close" id="modal-close" aria-label="Close detail view">✕</button>
     </div>
@@ -1811,6 +1836,12 @@ async function init() {
 
 init().catch((error) => {
   console.error("Dashboard load failed", error);
+  const note = document.getElementById("hero-observation-date");
+  if (note) note.textContent = "Data failed to load";
+  const hero = document.getElementById("hero-value");
+  if (hero) hero.textContent = "—";
+  const narrative = document.getElementById("narrative-copy");
+  if (narrative) narrative.textContent = "The cold storage archive could not be loaded. Check your connection and refresh to try again.";
   const grid = document.getElementById("compare-grid");
-  if (grid) grid.innerHTML = `<p style="padding:1rem">Could not load the cold storage archive.</p>`;
+  if (grid) grid.innerHTML = `<p style="padding:1rem 0">Could not load the cold storage archive.</p>`;
 });
