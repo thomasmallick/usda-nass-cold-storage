@@ -842,7 +842,7 @@ function renderHero(data) {
   }
 
   document.getElementById("hero-observation-date").textContent =
-    `Reporting on ${new Date(latest.observationDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}`;
+    `${new Date(latest.observationDate + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })} data`.toUpperCase();
   document.getElementById("hero-mom").textContent = formatPercent(mom);
   document.getElementById("hero-mom").className = `delta ${mom >= 0 ? "delta--up" : "delta--down"}`;
   document.getElementById("hero-yoy").textContent = formatPercent(yoy);
@@ -857,7 +857,7 @@ function renderHero(data) {
   } else {
     const obs = new Date(latest.observationDate + "T12:00:00Z");
     const est = new Date(Date.UTC(obs.getUTCFullYear(), obs.getUTCMonth() + 1, 22));
-    releaseEl.textContent = `≈ ${est.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
+    releaseEl.textContent = est.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
   }
   document.getElementById("next-release").textContent = estimatedNextReleaseLabel();
   const reportLink = document.getElementById("report-link");

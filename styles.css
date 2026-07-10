@@ -3,6 +3,14 @@
    Design language: editorial-dashboard-language / mosaic mode
    ============================================================ */
 
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/instrument-serif-latin.woff2") format("woff2");
+}
+
 :root {
   /* Base */
   --ed-ink: #111111;
@@ -81,28 +89,6 @@ a {
   max-width: 12ch;
 }
 
-.topbar-meta {
-  display: flex;
-  gap: var(--ed-space-2);
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.meta-chip {
-  min-width: 112px;
-  border: var(--ed-line);
-  border-radius: 999px;
-  padding: 0.65rem 0.9rem;
-  background: rgb(255 255 255 / 0.44);
-  backdrop-filter: blur(8px);
-}
-
-.meta-chip strong {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 1rem;
-}
-
 /* ── Per-American unit toggle ────────────────────────────── */
 /* The hero number IS the per-American toggle */
 .hero-number-row {
@@ -111,14 +97,13 @@ a {
 }
 
 .hero-number-row .hero-number {
-  border-bottom: 0.045em dashed color-mix(in srgb, var(--ed-ink) 32%, transparent);
-  transition: border-color 180ms ease;
+  transition: color 180ms ease;
 }
 
 .hero-number-row:hover .hero-number,
 .hero-number-row:focus-visible .hero-number,
 .hero-number-row.is-active .hero-number {
-  border-bottom-color: var(--em-coral);
+  color: var(--em-coral);
 }
 
 .hero-number-row:focus-visible {
@@ -1185,23 +1170,6 @@ a {
   break-inside: avoid;
 }
 
-/* ── Source chip NASS link ───────────────────────────────── */
-.source-nass-link {
-  color: inherit;
-  font-weight: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--ed-ink) 28%, transparent);
-  transition:
-    color 160ms ease,
-    border-color 160ms ease;
-}
-
-.source-nass-link:hover,
-.source-nass-link:focus-visible {
-  color: var(--em-coral);
-  border-bottom-color: var(--em-coral);
-}
-
 /* ── "As of" staleness tags ──────────────────────────────── */
 .dc-tile-asof,
 .sparkline-tile-percap {
@@ -1568,16 +1536,15 @@ a {
   padding: var(--ed-space-5) 0 var(--ed-space-3);
   border-top: var(--ed-line);
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .site-footer-mark {
-  font-family: var(--ed-font-display);
-  font-size: 0.95rem;
-  letter-spacing: 0.34em;
+  font-family: "Instrument Serif", var(--ed-font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
   text-transform: lowercase;
   opacity: 0.42;
-  padding-left: 0.34em;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
@@ -1615,7 +1582,6 @@ a {
 
 @media (max-width: 640px) {
   /* Source attribution lives in the Source panel; reclaim the row */
-  .topbar-meta .meta-chip { display: none; }
 
   .tab-pill { padding: 0.6rem 1rem; font-size: 0.86rem; }
   .filter-pill { padding: 0.6rem 0.9rem; font-size: 0.84rem; }
