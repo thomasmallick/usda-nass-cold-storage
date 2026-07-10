@@ -147,6 +147,18 @@ COMMODITY_MAP: dict[str, dict] = {
         "short_desc": "BEEF, BONE-IN, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
 
+    # Other meats — surfaced as "latest amount" chips in Deep Cuts.
+    # These short_descs are already used inside the poultry/red-meat aggregates.
+    "veal": {
+        "short_desc": "VEAL, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "lamb_mutton": {
+        "short_desc": "LAMB & MUTTON, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "ducks": {
+        "short_desc": "DUCKS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+
     # Frozen fruits
     "strawberries": {
         "short_desc": "STRAWBERRIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",

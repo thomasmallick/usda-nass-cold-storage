@@ -50,6 +50,9 @@ const COMMODITY_GROUPS = {
   pork_bellies: "protein",
   total_pork: "protein",
   total_frozen_red_meat: "protein",
+  veal: "protein",
+  lamb_mutton: "protein",
+  ducks: "protein",
 };
 
 // Deep-cut commodity metadata
@@ -63,6 +66,10 @@ const DEEP_CUT_LABELS = {
   // Beef cuts
   beef_boneless:   "Beef (boneless)",
   beef_bone_in:    "Beef (bone-in)",
+  // Other meats (single latest value, no monthly trend surfaced)
+  veal:            "Veal",
+  lamb_mutton:     "Lamb & mutton",
+  ducks:           "Ducks",
   // Frozen fruit
   strawberries:    "Strawberries",
   blueberries:     "Blueberries",
@@ -151,12 +158,28 @@ const TREND_EVENTS = [
   { month: "2022-10", label: "Butter stocks scrape multi-year lows — shortage headlines", filters: ["dairy"] },
 ];
 
-// Curated seasonal one-liners — only for famously seasonal commodities.
+// Curated seasonal one-liners. Every headline commodity gets one so the
+// Seasons view and detail modal always explain the shape, not just show it.
 const SEASONAL_NOTES = {
-  total_turkey: "Builds all summer — then Thanksgiving empties the freezer.",
-  butter: "Swells through summer milk flush, drains through holiday baking.",
-  strawberries: "The June harvest floods the freezer in one great wave.",
-  total_frozen_fruit: "Stocks crest after the summer pack, then feed smoothies all winter.",
+  butter: "Stocks swell through the spring–summer milk flush, then draw down hard into holiday baking.",
+  american_cheese: "Aging pipelines keep it steady — a slow spring build, a gentle autumn drawdown.",
+  swiss_cheese: "Long aging smooths the curve: a quiet late-winter peak, a slow summer slide.",
+  other_natural_cheese: "Tracks the milk supply — builds through summer, eases as the holidays pull it out.",
+  total_natural_cheese: "Cheese aging cellars fill on the summer milk flush and empty toward year-end.",
+  total_chicken: "Steady birds most of the year, then a late-fall build ahead of winter demand.",
+  total_turkey: "Builds all summer as birds are processed — then Thanksgiving empties the freezer overnight.",
+  total_frozen_poultry: "Turkey's Thanksgiving cliff drives the whole curve: summer build, November plunge.",
+  total_beef: "Lowest in late summer grilling season, rebuilds into winter as demand cools.",
+  pork_bellies: "The bacon barometer — stocks pile up in winter, then render down through BLT season.",
+  total_pork: "Builds over winter slaughter, thins through summer as grills fire up.",
+  total_frozen_red_meat: "Beef and pork together: a winter build, a summer grilling-season draw.",
+  total_frozen_fruit: "Crests right after the summer harvest pack, then feeds smoothies and pies all winter.",
+  total_frozen_vegetables: "Fills with the fall harvest, then draws down steadily until next season's pack.",
+  total_frozen_potatoes: "Peaks after the autumn dig, drains slowly as fries ship out through the year.",
+  // Deep-cut extras
+  strawberries: "The June harvest floods the freezer in one great wave, then recedes all year.",
+  blueberries: "A tight late-summer pack spikes stocks, which ebb through the winter.",
+  sweet_corn_cut: "The fall pack fills the freezer; stocks slide until next year's harvest.",
 };
 
 // ---------------------------------------------------------------------------
@@ -622,6 +645,7 @@ function estimatedNextReleaseLabel(today = new Date()) {
 function drawSparkline(canvas, values, {
   lineColor = "#ffffff", fillOpacity = 0.12, padding = 10, lineWidth = 1.5,
   hoverIdx = null, annotations = [], axes = null, padLeft = null, padBottom = null,
+  grow = 1,
 } = {}) {
   if (!values || values.filter((v) => v != null).length < 2) return;
 
@@ -648,9 +672,11 @@ function drawSparkline(canvas, values, {
   // Plot region: extra left/bottom gutters only when axes are drawn
   const pl = padLeft ?? padding;
   const pb = padBottom ?? padding;
+  // grow (0→1) scales every point up from the baseline so the whole line
+  // rises into place on first load. Axes stay put; the line rises to meet them.
   const pts = values.map((v, i) => v == null ? null : ({
     x: pl + (i / (values.length - 1)) * (cssW - pl - padding),
-    y: cssH - pb - ((v - min) / range) * (cssH - pb - padding),
+    y: cssH - pb - grow * ((v - min) / range) * (cssH - pb - padding),
   }));
 
   // Axes: recessive hairline gridlines + min/mid/max y labels + year x labels
@@ -770,6 +796,51 @@ function hexToRgba(hex, opacity) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${opacity})`;
+}
+
+/**
+ * Draw a sparkline that rises from the baseline on first paint, then run an
+ * optional hover-binder. Honours reduced-motion (draws the final frame
+ * immediately). A per-canvas token guards against overlapping animations.
+ */
+function animateSparkline(canvas, values, opts = {}, bindHover = null, { duration = 700 } = {}) {
+  if (!canvas) return;
+  const finish = () => {
+    drawSparkline(canvas, values, { ...opts, grow: 1 });
+    if (bindHover) bindHover();
+  };
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || !values || values.filter((v) => v != null).length < 2) { finish(); return; }
+
+  const token = (canvas._animToken || 0) + 1;
+  canvas._animToken = token;
+  const start = performance.now();
+
+  function frame(now) {
+    if (canvas._animToken !== token) return; // superseded by a newer draw
+    const t = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    drawSparkline(canvas, values, { ...opts, grow: eased });
+    if (t < 1) requestAnimationFrame(frame);
+    else finish();
+  }
+  requestAnimationFrame(frame);
+}
+
+/** Animate an SVG <path> drawing itself on via stroke-dashoffset. */
+function animateSvgPath(path, duration = 750) {
+  if (!path || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const len = path.getTotalLength ? path.getTotalLength() : 0;
+  if (!len) return;
+  path.style.transition = "none";
+  path.style.strokeDasharray = `${len}`;
+  path.style.strokeDashoffset = `${len}`;
+  // next frame: transition the offset to 0
+  requestAnimationFrame(() => {
+    path.style.transition = `stroke-dashoffset ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    path.style.strokeDashoffset = "0";
+  });
 }
 
 /** Snap a clientX to the nearest index that actually has data. */
@@ -1018,7 +1089,7 @@ function buildTrendAnnotations(values, dates, filter) {
   return annotations;
 }
 
-function renderChartStrip(data, filter) {
+function renderChartStrip(data, filter, { animate = false } = {}) {
   const canvas = document.getElementById("trend-canvas");
   const label = document.getElementById("trend-label");
   const monthCount = document.getElementById("trend-months");
@@ -1044,11 +1115,12 @@ function renderChartStrip(data, filter) {
   const annotations = buildTrendAnnotations(values, dates, filter);
 
   const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, annotations, padLeft: 52, padBottom: 22, axes: { dates } };
-  drawSparkline(canvas, values, opts);
   canvas.setAttribute("role", "img");
   canvas.setAttribute("aria-label",
     `${catDef?.title || "Total cold storage"} — 5-year trend, latest ${formatCompact.format((values.findLast((v) => v != null) || 0) * 1000)} lb`);
-  bindChartHover(canvas, values, dates, opts);
+  const bind = () => bindChartHover(canvas, values, dates, opts);
+  if (animate) animateSparkline(canvas, values, opts, bind, { duration: 850 });
+  else { drawSparkline(canvas, values, opts); bind(); }
 }
 
 function bindChartHover(canvas, values, dates, opts) {
@@ -1197,12 +1269,16 @@ function getSeriesForFilter(data, filter) {
   }));
 }
 
-function renderCompareGrid(data, filter) {
-  const compareGrid = document.getElementById("compare-grid");
-  const compareTitle = document.getElementById("compare-title");
+function renderCompareGrid(data, filter, {
+  grid = document.getElementById("compare-grid"),
+  title = document.getElementById("compare-title"),
+} = {}) {
+  const compareGrid = grid;
+  const compareTitle = title;
+  if (!compareGrid) return;
   const series = getSeriesForFilter(data, filter);
 
-  compareTitle.textContent = categoryDefinitions[filter].title;
+  if (compareTitle) compareTitle.textContent = categoryDefinitions[filter].title;
 
   compareGrid.innerHTML = series
     .map((item) => {
@@ -1250,9 +1326,13 @@ function renderCompareGrid(data, filter) {
 // ---------------------------------------------------------------------------
 // Render: ranking list
 // ---------------------------------------------------------------------------
-function renderRanking(data, filter) {
-  const rankingList = document.getElementById("ranking-list");
-  const rankingNote = document.getElementById("ranking-note");
+function renderRanking(data, filter, {
+  list = document.getElementById("ranking-list"),
+  note = document.getElementById("ranking-note"),
+} = {}) {
+  const rankingList = list;
+  const rankingNote = note;
+  if (!rankingList) return;
 
   const source = filter === "all"
     ? LEAF_KEYS.map((key) => ({
@@ -1273,7 +1353,7 @@ function renderRanking(data, filter) {
     .sort((a, b) => b.latest - a.latest);
 
   const maxLatest = Math.max(...items.map((item) => item.latest));
-  rankingNote.textContent = categoryDefinitions[filter].rankingNote;
+  if (rankingNote) rankingNote.textContent = categoryDefinitions[filter].rankingNote;
 
   rankingList.innerHTML = items
     .map((item) => {
@@ -1354,8 +1434,7 @@ function renderThroughTime(data, filter = "all") {
       if (series.filter((v) => v != null).length >= 2) {
         const dates = data.archive.snapshots.slice(-series.length).map((s) => s.observationDate);
         const opts = { lineColor: colors.line, fillOpacity: 0.15, lineWidth: 1.5 };
-        drawSparkline(canvas, series, opts);
-        attachSparklineHover(canvas, series, dates, opts);
+        animateSparkline(canvas, series, opts, () => attachSparklineHover(canvas, series, dates, opts), { duration: 600 });
       }
     });
   });
@@ -1381,14 +1460,22 @@ function bindThroughTimeFilters(data) {
 // ---------------------------------------------------------------------------
 // Render: Seasonality — "The freezer has seasons"
 // ---------------------------------------------------------------------------
-function seasonalTileSvg(index, { currentMonth = null, lineColor = "#3456d1" } = {}) {
-  const W = 260, H = 110, padX = 10, padTop = 14, padBottom = 24;
+function seasonalTileSvg(index, { currentMonth = null, lineColor = "#3456d1", variant = "tile" } = {}) {
+  const modal = variant === "modal";
+  const W = modal ? 640 : 260;
+  const H = modal ? 200 : 118;
+  const padL = 30;                 // room for the "avg" / axis labels
+  const padR = modal ? 44 : 12;    // room for peak/trough end labels
+  const padTop = modal ? 26 : 16;
+  const padBottom = 26;
+
   const valid = index.filter((v) => v != null);
-  const min = Math.min(...valid);
-  const max = Math.max(...valid);
+  // Always keep 100 (the mean) inside the plotted range so the avg line shows.
+  const min = Math.min(...valid, 100);
+  const max = Math.max(...valid, 100);
   const range = max - min || 1;
 
-  const px = (m) => padX + (m / 11) * (W - padX * 2);
+  const px = (m) => padL + (m / 11) * (W - padL - padR);
   const py = (v) => H - padBottom - ((v - min) / range) * (H - padTop - padBottom);
 
   let d = "";
@@ -1400,23 +1487,44 @@ function seasonalTileSvg(index, { currentMonth = null, lineColor = "#3456d1" } =
   const { peak, trough } = peakTroughMonths(index);
 
   const monthTicks = MONTH_ABBR.map((abbr, m) =>
-    `<text x="${px(m).toFixed(1)}" y="${H - 8}" class="seasonal-month${m === currentMonth ? " seasonal-month--now" : ""}" text-anchor="middle">${abbr[0]}</text>`,
+    `<text x="${px(m).toFixed(1)}" y="${H - 8}" class="seasonal-month${m === currentMonth ? " seasonal-month--now" : ""}" text-anchor="middle">${modal ? abbr : abbr[0]}</text>`,
   ).join("");
+
+  // Reference line at 100 (= this commodity's own yearly average)
+  const avgY = py(100).toFixed(1);
+  const avgLine =
+    `<line x1="${padL}" y1="${avgY}" x2="${(W - padR).toFixed(1)}" y2="${avgY}" class="seasonal-avg-line"/>` +
+    `<text x="${padL - 4}" y="${avgY}" class="seasonal-avg-label" text-anchor="end" dominant-baseline="middle">avg</text>`;
 
   const nowBand = currentMonth != null
     ? `<rect x="${(px(currentMonth) - 7).toFixed(1)}" y="${padTop - 6}" width="14" height="${H - padTop - padBottom + 12}" rx="7" class="seasonal-now-band"/>`
     : "";
 
+  // Peak / trough dots with month + delta labels. Labels sit above their dot
+  // (clamped below the top edge) and anchor-flip near the left/right edges so
+  // they never clip the tile or collide with the month row.
+  const extremeLabel = (m, delta) => {
+    const x = px(m);
+    let anchor = "middle", lx = x;
+    if (x < padL + 24) { anchor = "start"; lx = x - 4; }
+    else if (x > W - padR - 24) { anchor = "end"; lx = x + 4; }
+    const y = Math.max(padTop + 2, py(index[m]) - 7);
+    const sign = delta > 0 ? "+" : "";
+    return `<text x="${lx.toFixed(1)}" y="${y.toFixed(1)}" class="seasonal-extreme-label" text-anchor="${anchor}">${MONTH_ABBR[m]} ${sign}${delta}%</text>`;
+  };
   const peakDot = peak >= 0
-    ? `<circle cx="${px(peak).toFixed(1)}" cy="${py(index[peak]).toFixed(1)}" r="4" fill="${lineColor}"/>`
+    ? `<circle cx="${px(peak).toFixed(1)}" cy="${py(index[peak]).toFixed(1)}" r="4" fill="${lineColor}"/>` +
+      extremeLabel(peak, Math.round(index[peak] - 100))
     : "";
   const troughDot = trough >= 0
-    ? `<circle cx="${px(trough).toFixed(1)}" cy="${py(index[trough]).toFixed(1)}" r="4" fill="none" stroke="${lineColor}" stroke-width="1.5"/>`
+    ? `<circle cx="${px(trough).toFixed(1)}" cy="${py(index[trough]).toFixed(1)}" r="4" fill="none" stroke="${lineColor}" stroke-width="1.5"/>` +
+      extremeLabel(trough, Math.round(index[trough] - 100))
     : "";
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="seasonal-svg" aria-hidden="true">
+  return `<svg viewBox="0 0 ${W} ${H}" class="seasonal-svg${modal ? " seasonal-svg--modal" : ""}" aria-hidden="true">
     ${nowBand}
-    <path d="${d.trim()}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${avgLine}
+    <path d="${d.trim()}" class="seasonal-line" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     ${peakDot}${troughDot}${monthTicks}
   </svg>`;
 }
@@ -1517,8 +1625,30 @@ function renderDcTrackedTile(archive, key) {
     </div>`;
 }
 
-function renderDcDiscoveryChip(name) {
-  return `<div class="dc-chip" title="USDA tracks ${name}; no monthly series shown here">
+// Discovery names that map to a real archive key — once the pipeline collects
+// them, the chip upgrades from "no series" to a current stored amount.
+const DISCOVERY_KEYS = {
+  "Veal": "veal",
+  "Lamb & Mutton": "lamb_mutton",
+  "Ducks": "ducks",
+};
+
+function renderDcDiscoveryChip(archive, name) {
+  const key = DISCOVERY_KEYS[name];
+  const known = key ? lastKnown(archive, key) : null;
+
+  // We have a latest value but no meaningful monthly trend — show the amount.
+  if (known) {
+    const asOf = known.monthsStale > 0 ? `as of ${shortMonthYear(known.date)}` : "latest month";
+    return `<div class="dc-chip dc-chip--valued" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${escapeHtml(name)}: ${formatCompact.format(known.value * 1000)} lb">
+        <p class="dc-chip-eyebrow">Also tracked</p>
+        <p class="dc-chip-name">${escapeHtml(name)}</p>
+        <p class="dc-chip-value">${formatCompact.format(known.value * 1000)}<span class="dc-tile-unit"> lb</span></p>
+        <p class="dc-chip-note">${asOf}</p>
+      </div>`;
+  }
+
+  return `<div class="dc-chip" title="USDA tracks ${escapeHtml(name)}; no monthly series shown here">
       <p class="dc-chip-eyebrow">Also tracked</p>
       <p class="dc-chip-name">${escapeHtml(name)}</p>
       <span class="dc-chip-baseline" aria-hidden="true"></span>
@@ -1531,7 +1661,7 @@ function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
   if (!container) return;
   container.innerHTML =
     tracked.map((key) => renderDcTrackedTile(archive, key)).join("") +
-    discovery.map((name) => renderDcDiscoveryChip(name)).join("");
+    discovery.map((name) => renderDcDiscoveryChip(archive, name)).join("");
   // Draw sparklines after paint
   requestAnimationFrame(() => {
     tracked.forEach((key) => {
@@ -1545,8 +1675,7 @@ function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
         const dates = archive.snapshots.slice(-buildSparklineSeries(archive, key, 60).length)
           .map((s) => s.observationDate).slice(0, series.length);
         const opts = { lineColor: "#3456d1", fillOpacity: 0.1, lineWidth: 1.5, padding: 8 };
-        drawSparkline(canvas, series, opts);
-        attachSparklineHover(canvas, series, dates, opts);
+        animateSparkline(canvas, series, opts, () => attachSparklineHover(canvas, series, dates, opts), { duration: 600 });
       }
     });
   });
@@ -1675,8 +1804,9 @@ function openCommodityModal(key) {
     </div>
     ${idx ? `
       <div class="modal-seasonal">
-        <p class="mini-label">Seasonal rhythm — average month vs the commodity's mean</p>
-        ${seasonalTileSvg(idx, { currentMonth: reportMonth, lineColor: colors.line })}
+        <p class="mini-label">Seasonal rhythm — a typical year</p>
+        <p class="modal-seasonal-sub">Each point averages that calendar month across the archive. <strong>100 = this item's own yearly average</strong>; the shaded band marks the month being reported.</p>
+        ${seasonalTileSvg(idx, { currentMonth: reportMonth, lineColor: colors.line, variant: "modal" })}
         ${SEASONAL_NOTES[key] ? `<p class="seasonal-tile-note">${SEASONAL_NOTES[key]}</p>` : ""}
       </div>` : ""}
   `;
@@ -1684,12 +1814,18 @@ function openCommodityModal(key) {
   backdrop.hidden = false;
   document.body.style.overflow = "hidden";
 
-  drawModalChart();
+  // Draw after the modal is visible so the canvas has real dimensions, and
+  // animate the line + seasonal curve rising in.
+  requestAnimationFrame(() => {
+    drawModalChart({ animate: true });
+    const seasonalPath = body.querySelector(".seasonal-svg .seasonal-line");
+    if (seasonalPath) animateSvgPath(seasonalPath);
+  });
   document.getElementById("modal-close").addEventListener("click", closeCommodityModal);
   document.getElementById("modal-close").focus();
 }
 
-function drawModalChart() {
+function drawModalChart({ animate = false } = {}) {
   const key = state.modalKey;
   if (!key || !state.data) return;
   const canvas = document.getElementById("modal-canvas");
@@ -1702,8 +1838,8 @@ function drawModalChart() {
   const group = COMMODITY_GROUPS[key];
   const colors = TT_COLORS[group] || { line: "#3456d1" };
   const opts = { lineColor: colors.line, fillOpacity: 0.12, lineWidth: 2, padding: 12, padLeft: 52, padBottom: 22, axes: { dates } };
-  drawSparkline(canvas, series, opts);
-  attachSparklineHover(canvas, series, dates, opts);
+  if (animate) animateSparkline(canvas, series, opts, () => attachSparklineHover(canvas, series, dates, opts), { duration: 800 });
+  else { drawSparkline(canvas, series, opts); attachSparklineHover(canvas, series, dates, opts); }
 }
 
 function closeCommodityModal() {
@@ -1791,29 +1927,146 @@ function bindTabRouter(data) {
 }
 
 // ---------------------------------------------------------------------------
-// Filter binding (drives chart strip + narrative + comparison + ranking)
+// Overview: continuous scroll — "All storage" mosaic, then one band per
+// subcategory. The filter rail is a jump nav, not an in-place swap.
 // ---------------------------------------------------------------------------
+const OVERVIEW_SECTIONS = [
+  { filter: "dairy",   eyebrow: "Dairy" },
+  { filter: "produce", eyebrow: "Produce" },
+  { filter: "protein", eyebrow: "Meat + poultry" },
+];
+
+function buildCategorySections() {
+  const host = document.getElementById("category-sections");
+  if (!host || host.dataset.built) return;
+  host.dataset.built = "1";
+  host.innerHTML = OVERVIEW_SECTIONS.map(({ filter, eyebrow }) => `
+    <section class="category-section" id="section-${filter}" data-filter="${filter}">
+      <div class="category-section-head">
+        <p class="eyebrow">${eyebrow}</p>
+        <h2 class="view-title">${escapeHtml(categoryDefinitions[filter].title)}</h2>
+      </div>
+      <div class="category-mosaic">
+        <section class="editorial-panel editorial-panel--cobalt chart-panel">
+          <div class="panel-top"><div>
+            <p class="eyebrow eyebrow--light">5-year trend</p>
+            <h2 class="panel-title panel-title--light">${eyebrow} in cold storage</h2>
+          </div></div>
+          <div class="chart-strip-wrap">
+            <canvas class="trend-canvas" id="cat-canvas-${filter}" role="img" aria-label="${eyebrow} 5-year trend"></canvas>
+          </div>
+        </section>
+        <section class="editorial-panel editorial-panel--paper compare-panel">
+          <div class="panel-top"><div>
+            <p class="eyebrow">Year ago · last month · latest</p>
+            <h2 class="panel-title" id="cat-compare-title-${filter}">Storage mix</h2>
+          </div></div>
+          <div class="compare-grid" id="cat-compare-grid-${filter}"></div>
+          <p class="attribution">Bars scale from zero — the % badge carries the story.</p>
+        </section>
+        <section class="editorial-panel editorial-panel--ink ranking-panel">
+          <div class="panel-top">
+            <div>
+              <p class="eyebrow eyebrow--light">Operations list</p>
+              <h2 class="panel-title panel-title--light">${eyebrow}, ranked</h2>
+            </div>
+            <p class="mini-note mini-note--light" id="cat-ranking-note-${filter}"></p>
+          </div>
+          <div class="ranking-list" id="cat-ranking-list-${filter}"></div>
+        </section>
+      </div>
+    </section>`).join("");
+}
+
+function renderCategorySection(data, filter, { animate = false } = {}) {
+  const canvas = document.getElementById(`cat-canvas-${filter}`);
+  if (canvas) {
+    const values = buildCategorySparkline(data.archive, filter, 60);
+    const dates = data.archive.snapshots.slice(-values.length).map((s) => s.observationDate);
+    const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, padLeft: 52, padBottom: 22, axes: { dates } };
+    const bind = () => attachSparklineHover(canvas, values, dates, opts);
+    if (animate) animateSparkline(canvas, values, opts, bind, { duration: 800 });
+    else { drawSparkline(canvas, values, opts); bind(); }
+  }
+  renderCompareGrid(data, filter, {
+    grid: document.getElementById(`cat-compare-grid-${filter}`),
+    title: document.getElementById(`cat-compare-title-${filter}`),
+  });
+  renderRanking(data, filter, {
+    list: document.getElementById(`cat-ranking-list-${filter}`),
+    note: document.getElementById(`cat-ranking-note-${filter}`),
+  });
+}
+
+function renderAllStorageSection(data, { animate = false } = {}) {
+  renderCompareGrid(data, "all");
+  renderRanking(data, "all");
+  renderChartStrip(data, "all", { animate });
+  renderNarrative(data, "all");
+}
+
 function bindFilters(data) {
+  state.overviewFilter = "all";
   const pills = document.querySelectorAll(".filter-rail .filter-pill");
 
-  function update(next) {
-    state.overviewFilter = next;
-    pills.forEach((pill) => {
-      const active = pill.dataset.filter === next;
-      pill.classList.toggle("is-active", active);
-      pill.setAttribute("aria-pressed", String(active));
-    });
-    renderCompareGrid(data, next);
-    renderRanking(data, next);
-    renderChartStrip(data, next);
-    renderNarrative(data, next);
+  renderAllStorageSection(data, { animate: true });
+  buildCategorySections();
+
+  const sections = OVERVIEW_SECTIONS.map(({ filter }) => document.getElementById(`section-${filter}`));
+
+  // Render every band up front so content is always present even on a fast
+  // scroll or a deep link; the chart rises statically for now.
+  OVERVIEW_SECTIONS.forEach(({ filter }) => renderCategorySection(data, filter, { animate: false }));
+  const renderOnce = () => {}; // content already rendered; kept for the pill handler
+
+  // Replay each band's chart rise the first time it scrolls into view.
+  if ("IntersectionObserver" in window) {
+    const animated = new Set();
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        const filter = e.target.dataset.filter;
+        if (!e.isIntersecting || animated.has(filter)) continue;
+        animated.add(filter);
+        const canvas = document.getElementById(`cat-canvas-${filter}`);
+        if (!canvas) continue;
+        const values = buildCategorySparkline(data.archive, filter, 60);
+        const dates = data.archive.snapshots.slice(-values.length).map((s) => s.observationDate);
+        const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, padLeft: 52, padBottom: 22, axes: { dates } };
+        animateSparkline(canvas, values, opts, () => attachSparklineHover(canvas, values, dates, opts), { duration: 800 });
+      }
+    }, { rootMargin: "0px 0px -25% 0px" });
+    sections.forEach((s) => s && io.observe(s));
   }
 
-  pills.forEach((pill) => {
-    pill.addEventListener("click", () => update(pill.dataset.filter));
-  });
+  // Scrollspy: highlight the pill for the section nearest the top.
+  const setActive = (filter) => {
+    state.overviewFilter = filter;
+    pills.forEach((p) => {
+      const active = p.dataset.filter === filter;
+      p.classList.toggle("is-active", active);
+      p.setAttribute("aria-pressed", String(active));
+    });
+  };
+  if ("IntersectionObserver" in window) {
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.dataset.filter); });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    const allAnchor = document.querySelector(".editorial-dashboard-grid");
+    if (allAnchor) { allAnchor.dataset.filter = "all"; spy.observe(allAnchor); }
+    sections.forEach((s) => s && spy.observe(s));
+  }
 
-  update(state.overviewFilter);
+  // Pills jump-scroll to their section.
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const f = pill.dataset.filter;
+      if (f !== "all") renderOnce(f); // ensure the band is populated before scrolling
+      const el = f === "all"
+        ? document.querySelector(".editorial-dashboard-grid")
+        : document.getElementById(`section-${f}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1843,7 +2096,17 @@ function bindUnitToggle(data) {
 function rerenderForState(data) {
   renderHero(data);
   renderEditorialTiles(data);
-  renderRanking(data, state.overviewFilter);
+  // The overview scroll shows every category at once — refresh the "all"
+  // ranking plus each category band so per-capita values stay in sync.
+  renderRanking(data, "all");
+  OVERVIEW_SECTIONS.forEach(({ filter }) => {
+    if (document.getElementById(`cat-ranking-list-${filter}`)?.children.length) {
+      renderRanking(data, filter, {
+        list: document.getElementById(`cat-ranking-list-${filter}`),
+        note: document.getElementById(`cat-ranking-note-${filter}`),
+      });
+    }
+  });
   if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
   if (state.tab === "deep-cuts") renderDeepCuts(data);
 }
@@ -1856,7 +2119,14 @@ function bindResize(data) {
   window.addEventListener("resize", () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (state.tab === "overview") renderChartStrip(data, state.overviewFilter);
+      if (state.tab === "overview") {
+        renderChartStrip(data, "all");
+        // Redraw any category charts that have been rendered (no re-animation).
+        OVERVIEW_SECTIONS.forEach(({ filter }) => {
+          const canvas = document.getElementById(`cat-canvas-${filter}`);
+          if (canvas && canvas._hoverCleanup) renderCategorySection(data, filter, { animate: false });
+        });
+      }
       if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
       if (state.tab === "seasonality") renderSeasonality(data);
       if (state.tab === "deep-cuts") renderDeepCuts(data);

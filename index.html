@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
     <meta name="twitter:image" content="./assets/og-image.png" />
 
-    <link rel="stylesheet" href="./styles.css?v=3" />
+    <link rel="stylesheet" href="./styles.css?v=4" />
   </head>
   <body>
     <div class="editorial-dashboard-shell" data-mode="editorial-mosaic">
@@ -26,7 +26,8 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">USDA cold storage · updated monthly</p>
-          <h1 class="page-title">What America keeps frozen.</h1>
+          <h1 class="page-title">What <span class="title-america" aria-hidden="true"><span>A</span><span>m</span><span>e</span><span>r</span><span>i</span><span>c</span><span>a</span></span><span class="visually-hidden">America</span> keeps <span class="title-frozen">frozen</span>.</h1>
+          <p class="page-tagline">Land of the cheese, home of the cave.</p>
         </div>
       </header>
 
@@ -215,6 +216,9 @@
           </section>
 
         </main>
+
+        <!-- Per-category bands (Dairy / Produce / Meat + poultry) injected here -->
+        <div id="category-sections"></div>
       </div>
 
       <!-- ═══════════════════════════════════════════
@@ -308,6 +312,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=3"></script>
+    <script type="module" src="./app.js?v=4"></script>
   </body>
 </html>
