@@ -131,7 +131,12 @@ const DC_CURIOSITIES = [
   { key: "blackberries",     label: "Blackberries",    color: "cobalt",   copy: "Tracked two ways — loose and in barrels. Barrels of blackberries is its own federal statistic." },
   { key: "apricots",         label: "Apricots",        color: "sun",      copy: "A fruit most people forget exists gets a monthly federal headcount." },
   { key: "brussels_sprouts", label: "Brussels sprouts", color: "paper",   copy: "The vegetable you pushed around your plate is a matter of national record." },
-  { key: "eggs",             label: "Frozen eggs",     color: "coral",    copy: "You can freeze eggs — bakeries run on the stuff, and USDA counts every pound." },
+  // USDA reports eggs by weight, not count — estimateUnit converts the
+  // reported pounds into an actual egg count using INSIGHT_RECIPES' edible-
+  // portion weight (~50g / 0.11 lb per large egg), and the card is honest
+  // that the count is an estimate, not a USDA-reported figure.
+  { key: "eggs",             label: "Frozen eggs",     color: "coral",    copy: "You can freeze eggs — bakeries run on the stuff, and USDA counts every pound.",
+    estimateUnit: "eggs", estimateLabel: "estimated eggs in storage" },
 ];
 
 const DC_SECTIONS = {
@@ -348,10 +353,9 @@ const categoryDefinitions = {
       "total_turkey",
       "total_pork",
       "total_beef",
-      "pork_bellies",
     ],
     components: [
-      "pork_hams", "pork_loins", "pork_butts", "pork_ribs", "pork_trimmings",
+      "pork_bellies", "pork_hams", "pork_loins", "pork_butts", "pork_ribs", "pork_trimmings",
       "beef_boneless", "beef_bone_in", "veal", "lamb_mutton", "ducks",
     ],
     componentsNote: "Components & cuts · already counted in the totals above",
@@ -1923,7 +1927,7 @@ function bindCuriosityCards(container) {
         e.stopPropagation();
         card.classList.add("is-open");
         card.setAttribute("aria-expanded", "true");
-        animateCountUp(card.querySelector(".dc-curiosity-value-num"), Number(card.dataset.revealLb));
+        animateCountUp(card.querySelector(".dc-curiosity-value-num"), Number(card.dataset.revealNum));
         card.dataset.commodityKey = card.dataset.revealKey;
       }
     };
@@ -1940,7 +1944,7 @@ function renderDeepCuts(data) {
   // Curiosities — every card backed by a real series; tap to count it up
   const curiosEl = document.getElementById("dc-curiosities");
   if (curiosEl) {
-    curiosEl.innerHTML = DC_CURIOSITIES.map(({ key, label, color, copy }) => {
+    curiosEl.innerHTML = DC_CURIOSITIES.map(({ key, label, color, copy, estimateUnit, estimateLabel }) => {
       const known = key ? lastKnown(archive, key) : null;
       if (!known) {
         return `
@@ -1951,13 +1955,22 @@ function renderDeepCuts(data) {
             <p class="dc-curiosity-note">Still being counted — check back after the next data pull.</p>
           </div>`;
       }
-      const asOf = known.monthsStale > 0 ? `lb as of ${shortMonthYear(known.date)}` : "lb in storage right now";
+      const lb = known.value * 1000;
+      const stale = known.monthsStale > 0 ? ` as of ${shortMonthYear(known.date)}` : "";
+      // Most cards count up in raw pounds. Eggs are the exception: USDA reports
+      // them by weight, so we convert to a real egg count using the per-egg
+      // edible weight (INSIGHT_RECIPES) and label the result an estimate.
+      const perEgg = INSIGHT_RECIPES[key]?.lbPerUnit || 1;
+      const revealNum = estimateUnit ? Math.round(lb / perEgg) : lb;
+      const unitText = estimateUnit
+        ? `${estimateLabel}${stale}`
+        : (known.monthsStale > 0 ? `lb as of ${shortMonthYear(known.date)}` : "lb in storage right now");
       return `
-        <div class="dc-curiosity-card dc-curiosity-card--${color} dc-curiosity-card--reveal" data-reveal-lb="${known.value * 1000}" data-reveal-key="${key}" role="button" tabindex="0" aria-expanded="false" aria-label="${escapeHtml(label)} — tap to reveal the stored amount">
+        <div class="dc-curiosity-card dc-curiosity-card--${color} dc-curiosity-card--reveal" data-reveal-num="${revealNum}" data-reveal-key="${key}" role="button" tabindex="0" aria-expanded="false" aria-label="${escapeHtml(label)} — tap to reveal the stored amount">
           <p class="dc-curiosity-eyebrow">USDA tracks this</p>
           <p class="dc-curiosity-name">${label}.</p>
           <p class="dc-curiosity-copy">${copy}</p>
-          <p class="dc-curiosity-value" aria-hidden="true"><span class="dc-curiosity-value-num">0</span> <span class="dc-curiosity-value-unit">${asOf}</span></p>
+          <p class="dc-curiosity-value" aria-hidden="true"><span class="dc-curiosity-value-num">0</span> <span class="dc-curiosity-value-unit">${unitText}</span></p>
           <p class="dc-curiosity-note dc-curiosity-note--after">Tap again for the full chart →</p>
           <p class="dc-curiosity-prompt">Tap to count it</p>
         </div>`;
