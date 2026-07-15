@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated": "2026-06-11",
+    "updated": "2026-07-14",
     "source": "USDA NASS Cold Storage report (manual seed) + Quick Stats API",
     "units": "1000 lb",
     "note": "Values in 1000 lb. Dashboard multiplies by 1000 for display. Run scripts/fetch-usda.py --backfill 60 to populate historical snapshots."
@@ -41,7 +41,17 @@
         "carrots": 95033,
         "peas_green": 138486,
         "spinach": 56048,
-        "broccoli": 36950
+        "broccoli": 36950,
+        "veal": 7043,
+        "lamb_mutton": 24753,
+        "ducks": 2874,
+        "boysenberries": 569,
+        "okra": 15071,
+        "blackberries": 12042,
+        "apricots": 1830,
+        "brussels_sprouts": 12726,
+        "cauliflower": 29590,
+        "eggs": 24164
       }
     },
     {
@@ -79,7 +89,17 @@
         "carrots": 93905,
         "peas_green": 125457,
         "spinach": 66002,
-        "broccoli": 34205
+        "broccoli": 34205,
+        "veal": 6464,
+        "lamb_mutton": 21896,
+        "ducks": 2528,
+        "boysenberries": 476,
+        "okra": 13626,
+        "blackberries": 10396,
+        "apricots": 1443,
+        "brussels_sprouts": 12672,
+        "cauliflower": 29136,
+        "eggs": 26172
       }
     },
     {
@@ -117,7 +137,17 @@
         "carrots": 80049,
         "peas_green": 231790,
         "spinach": 64854,
-        "broccoli": 35964
+        "broccoli": 35964,
+        "veal": 5818,
+        "lamb_mutton": 21489,
+        "ducks": 2680,
+        "boysenberries": 956,
+        "okra": 19240,
+        "blackberries": 11473,
+        "apricots": 6381,
+        "brussels_sprouts": 12709,
+        "cauliflower": 31042,
+        "eggs": 25342
       }
     },
     {
@@ -155,7 +185,17 @@
         "carrots": 73240,
         "peas_green": 320166,
         "spinach": 62678,
-        "broccoli": 32896
+        "broccoli": 32896,
+        "veal": 5409,
+        "lamb_mutton": 21010,
+        "ducks": 2923,
+        "boysenberries": 1100,
+        "okra": 29431,
+        "blackberries": 22348,
+        "apricots": 10289,
+        "brussels_sprouts": 12879,
+        "cauliflower": 29242,
+        "eggs": 26859
       }
     },
     {
@@ -193,7 +233,17 @@
         "pork_butts": 13163,
         "pork_trimmings": 37237,
         "beef_bone_in": 30742,
-        "beans_green": 178850
+        "beans_green": 178850,
+        "veal": 6056,
+        "lamb_mutton": 22051,
+        "ducks": 3414,
+        "boysenberries": 1132,
+        "okra": 35977,
+        "blackberries": 22785,
+        "apricots": 10314,
+        "brussels_sprouts": 12781,
+        "cauliflower": 25502,
+        "eggs": 26769
       }
     },
     {
@@ -231,7 +281,17 @@
         "spinach": 50112,
         "broccoli": 28362,
         "total_frozen_poultry": 1155090,
-        "total_frozen_red_meat": 940334
+        "total_frozen_red_meat": 940334,
+        "veal": 5189,
+        "lamb_mutton": 25607,
+        "ducks": 3929,
+        "boysenberries": 824,
+        "okra": 39183,
+        "blackberries": 18133,
+        "apricots": 9807,
+        "brussels_sprouts": 12368,
+        "cauliflower": 25035,
+        "eggs": 25183
       }
     },
     {
@@ -269,7 +329,17 @@
         "peas_green": 263263,
         "spinach": 48225,
         "broccoli": 27209,
-        "total_frozen_red_meat": 947807
+        "total_frozen_red_meat": 947807,
+        "veal": 4519,
+        "lamb_mutton": 27155,
+        "ducks": 2984,
+        "boysenberries": 739,
+        "okra": 39815,
+        "blackberries": 16886,
+        "apricots": 8991,
+        "brussels_sprouts": 11711,
+        "cauliflower": 25854,
+        "eggs": 26391
       }
     },
     {
@@ -307,7 +377,17 @@
         "spinach": 51006,
         "broccoli": 24422,
         "total_frozen_poultry": 887345,
-        "total_frozen_red_meat": 920373
+        "total_frozen_red_meat": 920373,
+        "veal": 4283,
+        "lamb_mutton": 23487,
+        "ducks": 2814,
+        "boysenberries": 634,
+        "okra": 39424,
+        "blackberries": 14743,
+        "apricots": 7777,
+        "brussels_sprouts": 12336,
+        "cauliflower": 23925,
+        "eggs": 23067
       }
     },
     {
@@ -345,7 +425,17 @@
         "carrots": 85334,
         "peas_green": 207468,
         "broccoli": 25773,
-        "total_frozen_red_meat": 929285
+        "total_frozen_red_meat": 929285,
+        "veal": 3577,
+        "lamb_mutton": 22124,
+        "ducks": 2436,
+        "boysenberries": 570,
+        "okra": 34970,
+        "blackberries": 14265,
+        "apricots": 6244,
+        "brussels_sprouts": 11881,
+        "cauliflower": 24638,
+        "eggs": 24726
       }
     },
     {
@@ -383,7 +473,17 @@
         "sweet_corn_cut": 568673,
         "broccoli": 22924,
         "total_frozen_poultry": 1017173,
-        "total_frozen_red_meat": 986396
+        "total_frozen_red_meat": 986396,
+        "veal": 4401,
+        "lamb_mutton": 21856,
+        "ducks": 2120,
+        "boysenberries": 473,
+        "okra": 31655,
+        "blackberries": 13502,
+        "apricots": 6133,
+        "brussels_sprouts": 12709,
+        "cauliflower": 23079,
+        "eggs": 26085
       }
     },
     {
@@ -421,7 +521,17 @@
         "pork_trimmings": 53972,
         "beef_boneless": 484476,
         "blueberries": 173490,
-        "total_frozen_red_meat": 1035117
+        "total_frozen_red_meat": 1035117,
+        "veal": 3010,
+        "lamb_mutton": 22224,
+        "ducks": 2050,
+        "boysenberries": 452,
+        "okra": 28607,
+        "blackberries": 11730,
+        "apricots": 4982,
+        "brussels_sprouts": 11743,
+        "cauliflower": 21810,
+        "eggs": 27978
       }
     },
     {
@@ -459,7 +569,17 @@
         "carrots": 75476,
         "peas_green": 130013,
         "broccoli": 22571,
-        "total_frozen_red_meat": 1048526
+        "total_frozen_red_meat": 1048526,
+        "veal": 2682,
+        "lamb_mutton": 24006,
+        "ducks": 1771,
+        "boysenberries": 466,
+        "okra": 21228,
+        "blackberries": 10976,
+        "apricots": 2943,
+        "brussels_sprouts": 12629,
+        "cauliflower": 19531,
+        "eggs": 24328
       }
     },
     {
@@ -497,7 +617,17 @@
         "carrots": 77886,
         "spinach": 49850,
         "broccoli": 22377,
-        "total_frozen_poultry": 1102498
+        "total_frozen_poultry": 1102498,
+        "veal": 2816,
+        "lamb_mutton": 24414,
+        "ducks": 1884,
+        "boysenberries": 430,
+        "okra": 18517,
+        "blackberries": 10444,
+        "apricots": 2603,
+        "brussels_sprouts": 11620,
+        "cauliflower": 20094,
+        "eggs": 22433
       }
     },
     {
@@ -535,7 +665,17 @@
         "carrots": 76253,
         "peas_green": 99425,
         "total_frozen_poultry": 1129733,
-        "total_frozen_red_meat": 1097216
+        "total_frozen_red_meat": 1097216,
+        "veal": 2841,
+        "lamb_mutton": 22185,
+        "ducks": 1852,
+        "boysenberries": 350,
+        "okra": 13545,
+        "blackberries": 10772,
+        "apricots": 3151,
+        "brussels_sprouts": 11876,
+        "cauliflower": 22289,
+        "eggs": 21937
       }
     },
     {
@@ -573,7 +713,17 @@
         "sweet_corn_cut": 282762,
         "sweet_corn_cob": 161719,
         "spinach": 57986,
-        "total_frozen_red_meat": 1081397
+        "total_frozen_red_meat": 1081397,
+        "veal": 2705,
+        "lamb_mutton": 22807,
+        "ducks": 2181,
+        "boysenberries": 441,
+        "okra": 19222,
+        "blackberries": 11038,
+        "apricots": 9042,
+        "brussels_sprouts": 12466,
+        "cauliflower": 22305,
+        "eggs": 23686
       }
     },
     {
@@ -611,7 +761,17 @@
         "sweet_corn_cob": 164793,
         "total_natural_cheese": 1521797,
         "pork_loins": 33376,
-        "total_frozen_red_meat": 1066784
+        "total_frozen_red_meat": 1066784,
+        "veal": 2817,
+        "lamb_mutton": 25626,
+        "ducks": 2302,
+        "boysenberries": 1268,
+        "okra": 28371,
+        "blackberries": 28752,
+        "apricots": 9014,
+        "brussels_sprouts": 12902,
+        "cauliflower": 22399,
+        "eggs": 22989
       }
     },
     {
@@ -649,7 +809,17 @@
         "cherries_tart": 108640,
         "sweet_corn_cut": 408005,
         "sweet_corn_cob": 280245,
-        "total_frozen_red_meat": 1088519
+        "total_frozen_red_meat": 1088519,
+        "veal": 2931,
+        "lamb_mutton": 29198,
+        "ducks": 1685,
+        "boysenberries": 1522,
+        "okra": 33950,
+        "blackberries": 31034,
+        "apricots": 8292,
+        "brussels_sprouts": 14323,
+        "cauliflower": 22011,
+        "eggs": 25685
       }
     },
     {
@@ -687,7 +857,17 @@
         "beef_boneless": 473312,
         "sweet_corn_cut": 654726,
         "carrots": 52283,
-        "total_frozen_red_meat": 1097926
+        "total_frozen_red_meat": 1097926,
+        "veal": 3923,
+        "lamb_mutton": 30823,
+        "ducks": 1340,
+        "boysenberries": 1518,
+        "okra": 37250,
+        "blackberries": 30863,
+        "apricots": 7249,
+        "brussels_sprouts": 15334,
+        "cauliflower": 21338,
+        "eggs": 26645
       }
     },
     {
@@ -725,7 +905,17 @@
         "peas_green": 260744,
         "spinach": 35688,
         "total_frozen_poultry": 1176158,
-        "total_frozen_red_meat": 1051178
+        "total_frozen_red_meat": 1051178,
+        "veal": 2585,
+        "lamb_mutton": 28651,
+        "ducks": 1337,
+        "boysenberries": 1351,
+        "okra": 38050,
+        "blackberries": 28106,
+        "apricots": 6412,
+        "brussels_sprouts": 14632,
+        "cauliflower": 22233,
+        "eggs": 24195
       }
     },
     {
@@ -763,7 +953,17 @@
         "pork_hams": 55284,
         "total_chicken": 911453,
         "total_frozen_potatoes": 1180795,
-        "total_frozen_poultry": 1052878
+        "total_frozen_poultry": 1052878,
+        "veal": 2190,
+        "lamb_mutton": 29674,
+        "ducks": 1165,
+        "boysenberries": 1178,
+        "okra": 35990,
+        "blackberries": 26116,
+        "apricots": 6768,
+        "brussels_sprouts": 13184,
+        "cauliflower": 23246,
+        "eggs": 23798
       }
     },
     {
@@ -801,7 +1001,17 @@
         "pork_hams": 53414,
         "pork_trimmings": 53075,
         "peas_green": 232097,
-        "total_frozen_red_meat": 1028228
+        "total_frozen_red_meat": 1028228,
+        "veal": 1389,
+        "lamb_mutton": 26505,
+        "ducks": 1749,
+        "boysenberries": 1299,
+        "okra": 30463,
+        "blackberries": 26644,
+        "apricots": 5700,
+        "brussels_sprouts": 13967,
+        "cauliflower": 24090,
+        "eggs": 24243
       }
     },
     {
@@ -839,7 +1049,17 @@
         "total_chicken": 889547,
         "total_frozen_vegetables": 2210272,
         "total_frozen_red_meat": 1081446,
-        "total_frozen_poultry": 1181487
+        "total_frozen_poultry": 1181487,
+        "veal": 1833,
+        "lamb_mutton": 25312,
+        "ducks": 2344,
+        "boysenberries": 1262,
+        "okra": 25832,
+        "blackberries": 25937,
+        "apricots": 4966,
+        "brussels_sprouts": 13462,
+        "cauliflower": 25676,
+        "eggs": 28826
       }
     },
     {
@@ -877,7 +1097,17 @@
         "pork_bellies": 71011,
         "raspberries": 44515,
         "total_frozen_red_meat": 1053675,
-        "broccoli": 21677
+        "broccoli": 21677,
+        "veal": 1628,
+        "lamb_mutton": 29658,
+        "ducks": 2511,
+        "boysenberries": 1121,
+        "okra": 22242,
+        "blackberries": 27288,
+        "apricots": 4265,
+        "brussels_sprouts": 11715,
+        "cauliflower": 28273,
+        "eggs": 25532
       }
     },
     {
@@ -915,7 +1145,17 @@
         "total_frozen_poultry": 1194671,
         "total_frozen_red_meat": 1039114,
         "pork_hams": 84554,
-        "pork_trimmings": 55618
+        "pork_trimmings": 55618,
+        "veal": 1643,
+        "lamb_mutton": 25772,
+        "ducks": 2599,
+        "boysenberries": 1319,
+        "okra": 20079,
+        "blackberries": 27160,
+        "apricots": 4088,
+        "brussels_sprouts": 11256,
+        "cauliflower": 26430,
+        "eggs": 24362
       }
     },
     {
@@ -953,7 +1193,17 @@
         "strawberries": 170849,
         "raspberries": 30683,
         "spinach": 34673,
-        "broccoli": 22150
+        "broccoli": 22150,
+        "veal": 1582,
+        "lamb_mutton": 24519,
+        "ducks": 2412,
+        "boysenberries": 1496,
+        "okra": 18730,
+        "blackberries": 25942,
+        "apricots": 3009,
+        "brussels_sprouts": 11272,
+        "cauliflower": 27717,
+        "eggs": 24942
       }
     },
     {
@@ -991,7 +1241,17 @@
         "total_frozen_poultry": 1239229,
         "pork_bellies": 82531,
         "total_frozen_red_meat": 983492,
-        "pork_hams": 137159
+        "pork_hams": 137159,
+        "veal": 964,
+        "lamb_mutton": 25111,
+        "ducks": 2566,
+        "boysenberries": 1492,
+        "okra": 18090,
+        "blackberries": 24416,
+        "apricots": 2754,
+        "brussels_sprouts": 11038,
+        "cauliflower": 25098,
+        "eggs": 30472
       }
     },
     {
@@ -1029,7 +1289,17 @@
         "total_frozen_poultry": 1300416,
         "pork_ribs": 62599,
         "pork_loins": 34660,
-        "beef_boneless": 374547
+        "beef_boneless": 374547,
+        "veal": 963,
+        "lamb_mutton": 24834,
+        "ducks": 2656,
+        "boysenberries": 1221,
+        "okra": 21112,
+        "blackberries": 23730,
+        "apricots": 7308,
+        "brussels_sprouts": 10256,
+        "cauliflower": 26280,
+        "eggs": 27345
       }
     },
     {
@@ -1067,7 +1337,17 @@
         "total_frozen_fruit": 1052715,
         "total_frozen_red_meat": 909795,
         "raspberries": 76566,
-        "sweet_corn_cut": 334194
+        "sweet_corn_cut": 334194,
+        "veal": 1174,
+        "lamb_mutton": 27398,
+        "ducks": 2305,
+        "boysenberries": 2126,
+        "okra": 26070,
+        "blackberries": 34219,
+        "apricots": 11078,
+        "brussels_sprouts": 10768,
+        "cauliflower": 26317,
+        "eggs": 29396
       }
     },
     {
@@ -1105,7 +1385,17 @@
         "raspberries": 76468,
         "total_frozen_poultry": 1278593,
         "sweet_corn_cut": 499929,
-        "cherries_tart": 72517
+        "cherries_tart": 72517,
+        "veal": 1148,
+        "lamb_mutton": 26174,
+        "ducks": 2370,
+        "boysenberries": 2028,
+        "okra": 31669,
+        "blackberries": 32924,
+        "apricots": 10663,
+        "brussels_sprouts": 11271,
+        "cauliflower": 25200,
+        "eggs": 32212
       }
     },
     {
@@ -1143,7 +1433,17 @@
         "raspberries": 69162,
         "cherries_tart": 85379,
         "sweet_corn_cob": 346075,
-        "total_frozen_poultry": 1255126
+        "total_frozen_poultry": 1255126,
+        "veal": 1302,
+        "lamb_mutton": 26155,
+        "ducks": 2702,
+        "boysenberries": 1839,
+        "okra": 33727,
+        "blackberries": 31253,
+        "apricots": 10114,
+        "brussels_sprouts": 10692,
+        "cauliflower": 24501,
+        "eggs": 30181
       }
     },
     {
@@ -1181,7 +1481,17 @@
         "total_beef": 445668,
         "pork_bellies": 28061,
         "pork_hams": 113570,
-        "pork_ribs": 70095
+        "pork_ribs": 70095,
+        "veal": 942,
+        "lamb_mutton": 26127,
+        "ducks": 2557,
+        "boysenberries": 1838,
+        "okra": 36553,
+        "blackberries": 27484,
+        "apricots": 8902,
+        "brussels_sprouts": 9822,
+        "cauliflower": 23851,
+        "eggs": 31462
       }
     },
     {
@@ -1219,7 +1529,17 @@
         "total_frozen_red_meat": 896393,
         "pork_hams": 57290,
         "pork_ribs": 76106,
-        "pork_loins": 40509
+        "pork_loins": 40509,
+        "veal": 890,
+        "lamb_mutton": 22430,
+        "ducks": 2680,
+        "boysenberries": 1706,
+        "okra": 34094,
+        "blackberries": 25352,
+        "apricots": 7967,
+        "brussels_sprouts": 9988,
+        "cauliflower": 24162,
+        "eggs": 29355
       }
     },
     {
@@ -1257,7 +1577,17 @@
         "total_frozen_fruit": 1290044,
         "total_frozen_red_meat": 929030,
         "pork_ribs": 80508,
-        "pork_hams": 55004
+        "pork_hams": 55004,
+        "veal": 958,
+        "lamb_mutton": 20375,
+        "ducks": 2437,
+        "boysenberries": 1621,
+        "okra": 31100,
+        "blackberries": 23852,
+        "apricots": 7579,
+        "brussels_sprouts": 10321,
+        "cauliflower": 23956,
+        "eggs": 29832
       }
     },
     {
@@ -1295,7 +1625,17 @@
         "beef_boneless": 423603,
         "total_frozen_red_meat": 949250,
         "blueberries": 248659,
-        "cherries_tart": 46415
+        "cherries_tart": 46415,
+        "veal": 1429,
+        "lamb_mutton": 19930,
+        "ducks": 2467,
+        "boysenberries": 1552,
+        "okra": 27723,
+        "blackberries": 21331,
+        "apricots": 5856,
+        "brussels_sprouts": 11015,
+        "cauliflower": 22797,
+        "eggs": 29399
       }
     },
     {
@@ -1333,7 +1673,17 @@
         "pork_ribs": 88373,
         "pork_loins": 42016,
         "strawberries": 128355,
-        "raspberries": 44288
+        "raspberries": 44288,
+        "veal": 796,
+        "lamb_mutton": 19973,
+        "ducks": 2596,
+        "boysenberries": 1571,
+        "okra": 25748,
+        "blackberries": 22074,
+        "apricots": 4118,
+        "brussels_sprouts": 11237,
+        "cauliflower": 23549,
+        "eggs": 32088
       }
     },
     {
@@ -1371,7 +1721,17 @@
         "pork_loins": 39984,
         "pork_butts": 18693,
         "blueberries": 202319,
-        "total_frozen_red_meat": 910122
+        "total_frozen_red_meat": 910122,
+        "veal": 551,
+        "lamb_mutton": 22575,
+        "ducks": 2693,
+        "boysenberries": 1456,
+        "okra": 23547,
+        "blackberries": 22215,
+        "apricots": 2649,
+        "brussels_sprouts": 10373,
+        "cauliflower": 22470,
+        "eggs": 30333
       }
     },
     {
@@ -1409,7 +1769,17 @@
         "carrots": 64896,
         "peas_green": 163010,
         "spinach": 34609,
-        "broccoli": 20495
+        "broccoli": 20495,
+        "veal": 719,
+        "lamb_mutton": 23229,
+        "ducks": 3569,
+        "boysenberries": 1659,
+        "okra": 21115,
+        "blackberries": 21856,
+        "apricots": 2441,
+        "brussels_sprouts": 10599,
+        "cauliflower": 21563,
+        "eggs": 28840
       }
     },
     {
@@ -1447,7 +1817,17 @@
         "carrots": 63651,
         "peas_green": 144803,
         "spinach": 41467,
-        "broccoli": 20022
+        "broccoli": 20022,
+        "veal": 680,
+        "lamb_mutton": 23373,
+        "ducks": 3048,
+        "boysenberries": 1487,
+        "okra": 21661,
+        "blackberries": 19988,
+        "apricots": 2064,
+        "brussels_sprouts": 10537,
+        "cauliflower": 20237,
+        "eggs": 29677
       }
     },
     {
@@ -1485,7 +1865,17 @@
         "carrots": 65527,
         "peas_green": 239376,
         "spinach": 41328,
-        "broccoli": 19411
+        "broccoli": 19411,
+        "veal": 642,
+        "lamb_mutton": 23713,
+        "ducks": 2596,
+        "boysenberries": 1599,
+        "okra": 27966,
+        "blackberries": 20743,
+        "apricots": 9174,
+        "brussels_sprouts": 10269,
+        "cauliflower": 19877,
+        "eggs": 30006
       }
     },
     {
@@ -1523,7 +1913,17 @@
         "carrots": 60922,
         "peas_green": 315127,
         "spinach": 36868,
-        "broccoli": 20181
+        "broccoli": 20181,
+        "veal": 629,
+        "lamb_mutton": 24870,
+        "ducks": 2238,
+        "boysenberries": 1963,
+        "okra": 29801,
+        "blackberries": 30433,
+        "apricots": 8788,
+        "brussels_sprouts": 10847,
+        "cauliflower": 19461,
+        "eggs": 28926
       }
     },
     {
@@ -1561,7 +1961,17 @@
         "carrots": 53392,
         "peas_green": 292550,
         "spinach": 30578,
-        "broccoli": 20081
+        "broccoli": 20081,
+        "veal": 775,
+        "lamb_mutton": 25093,
+        "ducks": 2268,
+        "boysenberries": 1835,
+        "okra": 33553,
+        "blackberries": 30221,
+        "apricots": 8224,
+        "brussels_sprouts": 11260,
+        "cauliflower": 19444,
+        "eggs": 28268
       }
     },
     {
@@ -1599,7 +2009,17 @@
         "carrots": 71504,
         "peas_green": 276742,
         "spinach": 29878,
-        "broccoli": 20830
+        "broccoli": 20830,
+        "veal": 790,
+        "lamb_mutton": 24984,
+        "ducks": 2272,
+        "boysenberries": 1745,
+        "okra": 36445,
+        "blackberries": 28363,
+        "apricots": 7315,
+        "brussels_sprouts": 10320,
+        "cauliflower": 18464,
+        "eggs": 24922
       }
     },
     {
@@ -1637,7 +2057,17 @@
         "carrots": 92197,
         "peas_green": 251258,
         "spinach": 25697,
-        "broccoli": 20240
+        "broccoli": 20240,
+        "veal": 747,
+        "lamb_mutton": 24048,
+        "ducks": 2018,
+        "boysenberries": 1632,
+        "okra": 37500,
+        "blackberries": 25951,
+        "apricots": 6220,
+        "brussels_sprouts": 9722,
+        "cauliflower": 19186,
+        "eggs": 24707
       }
     },
     {
@@ -1675,7 +2105,17 @@
         "carrots": 98124,
         "peas_green": 223504,
         "spinach": 25176,
-        "broccoli": 17875
+        "broccoli": 17875,
+        "lamb_mutton": 22502,
+        "veal": 818,
+        "ducks": 1593,
+        "boysenberries": 1534,
+        "okra": 37542,
+        "blackberries": 24419,
+        "apricots": 5401,
+        "brussels_sprouts": 8685,
+        "cauliflower": 17778,
+        "eggs": 19839
       }
     },
     {
@@ -1713,7 +2153,17 @@
         "carrots": 93956,
         "peas_green": 200306,
         "spinach": 25787,
-        "broccoli": 17084
+        "broccoli": 17084,
+        "veal": 999,
+        "lamb_mutton": 19774,
+        "ducks": 1410,
+        "boysenberries": 1444,
+        "okra": 35938,
+        "blackberries": 22139,
+        "apricots": 5148,
+        "brussels_sprouts": 9653,
+        "cauliflower": 17798,
+        "eggs": 18362
       }
     },
     {
@@ -1751,7 +2201,17 @@
         "carrots": 86085,
         "peas_green": 186226,
         "spinach": 24210,
-        "broccoli": 17897
+        "broccoli": 17897,
+        "veal": 827,
+        "lamb_mutton": 18115,
+        "ducks": 1236,
+        "boysenberries": 1395,
+        "okra": 33330,
+        "blackberries": 19494,
+        "apricots": 4362,
+        "brussels_sprouts": 9826,
+        "cauliflower": 19220,
+        "eggs": 17131
       }
     },
     {
@@ -1789,7 +2249,17 @@
         "carrots": 79789,
         "peas_green": 156488,
         "spinach": 22392,
-        "broccoli": 17791
+        "broccoli": 17791,
+        "veal": 653,
+        "lamb_mutton": 19502,
+        "ducks": 1248,
+        "boysenberries": 1384,
+        "okra": 30119,
+        "blackberries": 20245,
+        "apricots": 3941,
+        "brussels_sprouts": 9580,
+        "cauliflower": 20863,
+        "eggs": 14420
       }
     },
     {
@@ -1827,7 +2297,17 @@
         "carrots": 77552,
         "peas_green": 138142,
         "spinach": 24209,
-        "broccoli": 17384
+        "broccoli": 17384,
+        "veal": 454,
+        "lamb_mutton": 19003,
+        "ducks": 1333,
+        "boysenberries": 1371,
+        "okra": 27614,
+        "blackberries": 19826,
+        "apricots": 2682,
+        "brussels_sprouts": 9404,
+        "cauliflower": 19161,
+        "eggs": 13934
       }
     },
     {
@@ -1865,7 +2345,17 @@
         "carrots": 78856,
         "peas_green": 115919,
         "spinach": 31149,
-        "broccoli": 16781
+        "broccoli": 16781,
+        "ducks": 1533,
+        "veal": 470,
+        "lamb_mutton": 19310,
+        "boysenberries": 1346,
+        "okra": 26696,
+        "blackberries": 18899,
+        "apricots": 2332,
+        "brussels_sprouts": 9356,
+        "cauliflower": 17459,
+        "eggs": 14192
       }
     },
     {
@@ -1903,7 +2393,17 @@
         "carrots": 76419,
         "peas_green": 107163,
         "spinach": 35766,
-        "broccoli": 16289
+        "broccoli": 16289,
+        "veal": 424,
+        "lamb_mutton": 19574,
+        "ducks": 2097,
+        "boysenberries": 1210,
+        "okra": 27538,
+        "blackberries": 17895,
+        "apricots": 2913,
+        "brussels_sprouts": 9562,
+        "cauliflower": 16560,
+        "eggs": 14527
       }
     },
     {
@@ -1941,7 +2441,17 @@
         "carrots": 73755,
         "peas_green": 176304,
         "spinach": 34434,
-        "broccoli": 15896
+        "broccoli": 15896,
+        "veal": 473,
+        "lamb_mutton": 20935,
+        "ducks": 2581,
+        "boysenberries": 1046,
+        "okra": 30686,
+        "blackberries": 18955,
+        "apricots": 9095,
+        "brussels_sprouts": 10017,
+        "cauliflower": 17252,
+        "eggs": 15571
       }
     },
     {
@@ -1979,7 +2489,17 @@
         "carrots": 70878,
         "peas_green": 253165,
         "spinach": 28710,
-        "broccoli": 14528
+        "broccoli": 14528,
+        "veal": 631,
+        "lamb_mutton": 22648,
+        "ducks": 2379,
+        "boysenberries": 1432,
+        "okra": 34781,
+        "blackberries": 34330,
+        "apricots": 8552,
+        "brussels_sprouts": 10466,
+        "cauliflower": 15832,
+        "eggs": 15586
       }
     },
     {
@@ -2017,7 +2537,17 @@
         "carrots": 66465,
         "peas_green": 220810,
         "spinach": 24018,
-        "broccoli": 13120
+        "broccoli": 13120,
+        "veal": 645,
+        "lamb_mutton": 21370,
+        "ducks": 2440,
+        "boysenberries": 1342,
+        "okra": 36022,
+        "blackberries": 33847,
+        "apricots": 8816,
+        "brussels_sprouts": 10411,
+        "cauliflower": 14039,
+        "eggs": 19965
       }
     },
     {
@@ -2055,7 +2585,17 @@
         "carrots": 73244,
         "peas_green": 205284,
         "spinach": 23789,
-        "broccoli": 16021
+        "broccoli": 16021,
+        "veal": 486,
+        "lamb_mutton": 22094,
+        "ducks": 2284,
+        "boysenberries": 1230,
+        "okra": 36968,
+        "blackberries": 31719,
+        "apricots": 8661,
+        "brussels_sprouts": 9399,
+        "cauliflower": 11675,
+        "eggs": 18688
       }
     },
     {
@@ -2093,7 +2633,17 @@
         "carrots": 95305,
         "peas_green": 189740,
         "spinach": 20803,
-        "broccoli": 17138
+        "broccoli": 17138,
+        "veal": 394,
+        "lamb_mutton": 20704,
+        "ducks": 2408,
+        "boysenberries": 1205,
+        "okra": 37562,
+        "blackberries": 28087,
+        "apricots": 7412,
+        "brussels_sprouts": 8610,
+        "cauliflower": 11648,
+        "eggs": 17789
       }
     },
     {
@@ -2131,7 +2681,17 @@
         "carrots": 100512,
         "peas_green": 167796,
         "spinach": 22886,
-        "broccoli": 17408
+        "broccoli": 17408,
+        "veal": 360,
+        "lamb_mutton": 18660,
+        "ducks": 2812,
+        "boysenberries": 1148,
+        "okra": 38149,
+        "blackberries": 26425,
+        "apricots": 5868,
+        "brussels_sprouts": 9405,
+        "cauliflower": 11516,
+        "eggs": 20126
       }
     },
     {
@@ -2169,7 +2729,17 @@
         "carrots": 101199,
         "peas_green": 141395,
         "spinach": 20573,
-        "broccoli": 16626
+        "broccoli": 16626,
+        "veal": 373,
+        "lamb_mutton": 17232,
+        "ducks": 1869,
+        "boysenberries": 1159,
+        "okra": 34413,
+        "blackberries": 27419,
+        "apricots": 4400,
+        "brussels_sprouts": 10098,
+        "cauliflower": 13635,
+        "eggs": 22097
       }
     },
     {
@@ -2207,7 +2777,17 @@
         "carrots": 97948,
         "peas_green": 112904,
         "spinach": 21155,
-        "broccoli": 17275
+        "broccoli": 17275,
+        "lamb_mutton": 16938,
+        "ducks": 1514,
+        "veal": 508,
+        "boysenberries": 1159,
+        "okra": 31591,
+        "blackberries": 27633,
+        "apricots": 3496,
+        "brussels_sprouts": 10028,
+        "cauliflower": 12920,
+        "eggs": 27433
       }
     },
     {
@@ -2245,7 +2825,17 @@
         "carrots": 94393,
         "peas_green": 101981,
         "spinach": 19475,
-        "broccoli": 17026
+        "broccoli": 17026,
+        "ducks": 1548,
+        "veal": 686,
+        "lamb_mutton": 16774,
+        "boysenberries": 1184,
+        "okra": 28444,
+        "blackberries": 28633,
+        "apricots": 2592,
+        "brussels_sprouts": 10161,
+        "cauliflower": 14741,
+        "eggs": 25938
       }
     },
     {
@@ -2283,7 +2873,17 @@
         "carrots": 90423,
         "peas_green": 83332,
         "spinach": 20363,
-        "broccoli": 16610
+        "broccoli": 16610,
+        "veal": 414,
+        "lamb_mutton": 16231,
+        "ducks": 1359,
+        "boysenberries": 1064,
+        "okra": 26354,
+        "blackberries": 27395,
+        "brussels_sprouts": 9685,
+        "cauliflower": 12932,
+        "apricots": 1810,
+        "eggs": 26480
       }
     },
     {
@@ -2321,7 +2921,17 @@
         "blueberries": 155094,
         "cherries_tart": 23622,
         "sweet_corn_cut": 314326,
-        "peas_green": 60672
+        "peas_green": 60672,
+        "lamb_mutton": 16690,
+        "ducks": 1499,
+        "veal": 465,
+        "okra": 24473,
+        "blackberries": 25723,
+        "cauliflower": 14061,
+        "brussels_sprouts": 9929,
+        "eggs": 28661,
+        "boysenberries": 1063,
+        "apricots": 1776
       }
     }
   ]

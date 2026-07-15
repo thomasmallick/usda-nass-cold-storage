@@ -12,7 +12,7 @@ Vanilla HTML / CSS / JS. No build tools. No framework. Static site.
 ## Key files
 | File | Role |
 |------|------|
-| `index.html` | Layout shell — 4 tabs: Overview / Through Time / Seasons / Deep Cuts, plus detail modal |
+| `index.html` | Layout shell — 4 tabs: The Big Picture / The Rhythm / The Archive / The Weird Stuff (ids: overview / seasonality / through-time / deep-cuts), plus detail modal |
 | `app.js` | All data logic + rendering. Single `state` object; null-aware sparklines (missing months = gaps, never zero); dynamic editorial headlines; per-American toggle; seasonality math |
 | `styles.css` | Full design system; Editorial Mosaic tokens |
 | `data/cold-storage-archive.json` | Multi-year monthly archive (main data source) |

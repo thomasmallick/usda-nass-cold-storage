@@ -195,6 +195,29 @@ COMMODITY_MAP: dict[str, dict] = {
     "broccoli": {
         "short_desc": "BROCCOLI, CHOPPED & CUT, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
     },
+    # Curiosity commodities — the "things you didn't know they tracked" cards.
+    "boysenberries": {
+        "short_desc": "BOYSENBERRIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "okra": {
+        "short_desc": "OKRA, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "blackberries": {
+        "short_desc": "BLACKBERRIES, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "apricots": {
+        "short_desc": "APRICOTS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "brussels_sprouts": {
+        "short_desc": "BRUSSELS SPROUTS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    "cauliflower": {
+        "short_desc": "CAULIFLOWER, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
+    # Frozen egg product — bakeries' liquid-egg supply, frozen in bulk.
+    "eggs": {
+        "short_desc": "EGGS, COLD STORAGE, FROZEN - STOCKS, MEASURED IN LB",
+    },
 }
 
 

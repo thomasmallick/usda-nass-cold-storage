@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
     <meta name="twitter:image" content="./assets/og-image.png" />
 
-    <link rel="stylesheet" href="./styles.css?v=4" />
+    <link rel="stylesheet" href="./styles.css?v=15" />
   </head>
   <body>
     <div class="editorial-dashboard-shell" data-mode="editorial-mosaic">
@@ -26,7 +26,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">USDA cold storage · updated monthly</p>
-          <h1 class="page-title">What <span class="title-america" aria-hidden="true"><span>A</span><span>m</span><span>e</span><span>r</span><span>i</span><span>c</span><span>a</span></span><span class="visually-hidden">America</span> keeps <span class="title-frozen">frozen</span>.</h1>
+          <h1 class="page-title">What America keeps frozen.</h1>
           <p class="page-tagline">Land of the cheese, home of the cave.</p>
         </div>
       </header>
@@ -35,10 +35,10 @@
            TAB NAVIGATION
       ════════════════════════════════════════════ -->
       <nav class="tab-bar" role="tablist" aria-label="Dashboard views">
-        <button class="tab-pill tab-pill--active" data-tab="overview" type="button" role="tab" aria-selected="true">Overview</button>
-        <button class="tab-pill" data-tab="through-time" type="button" role="tab" aria-selected="false">Through Time</button>
-        <button class="tab-pill" data-tab="seasonality" type="button" role="tab" aria-selected="false">Seasons</button>
-        <button class="tab-pill" data-tab="deep-cuts" type="button" role="tab" aria-selected="false">Deep Cuts</button>
+        <button class="tab-pill tab-pill--active" data-tab="overview" type="button" role="tab" aria-selected="true">The Big Picture</button>
+        <button class="tab-pill" data-tab="seasonality" type="button" role="tab" aria-selected="false">The Rhythm</button>
+        <button class="tab-pill" data-tab="through-time" type="button" role="tab" aria-selected="false">The Archive</button>
+        <button class="tab-pill" data-tab="deep-cuts" type="button" role="tab" aria-selected="false">The Weird Stuff</button>
       </nav>
 
       <!-- ═══════════════════════════════════════════
@@ -67,7 +67,6 @@
                 <span class="hero-number" id="hero-value">—</span>
                 <span class="hero-unit" id="hero-unit">lb</span>
               </div>
-              <p class="hero-tap-hint" id="hero-tap-hint">Click the number to see your share of it.</p>
               <p class="hero-subtitle">
                 The 15 headline categories USDA reports each month — butter, beef, broccoli, and everything in between.
               </p>
@@ -124,7 +123,32 @@
             <span class="insight-badge" id="insight-leader"></span>
           </section>
 
-          <!-- ROW 2 — Narrative slab + Chart strip -->
+          <!-- ROW 2 — Why the freezer exists: the story spine -->
+
+          <section class="editorial-panel editorial-panel--kelp why-strip" data-span="why">
+            <p class="eyebrow eyebrow--light">Why a freezer this big exists</p>
+            <h2 class="why-strip-headline">Harvests are moments. Appetite is constant.</h2>
+            <div class="why-strip-beats">
+              <div class="why-beat">
+                <p class="why-beat-num">01</p>
+                <p class="why-beat-title">Food arrives in bursts</p>
+                <p class="why-beat-copy">Milk floods in when spring pastures green up. Strawberries ripen in one June wave. Potatoes come out of the ground in a single autumn dig.</p>
+              </div>
+              <div class="why-beat">
+                <p class="why-beat-num">02</p>
+                <p class="why-beat-title">Eating never pauses</p>
+                <p class="why-beat-copy">Demand runs flat — or backwards. Butter peaks at holiday baking, half a year after the milk that made it. A year of turkeys is eaten in one November week.</p>
+              </div>
+              <div class="why-beat">
+                <p class="why-beat-num">03</p>
+                <p class="why-beat-title">The freezer bridges the gap</p>
+                <p class="why-beat-copy">Commercial cold-storage warehouses absorb each harvest and release it on demand's schedule. Every curve on this site is that bridge at work.</p>
+              </div>
+            </div>
+            <p class="why-strip-foot">None of this is a secret federal stockpile. USDA doesn't own the food — it counts it, publishing the nation's frozen buffer every month for over a century so markets can't be blindsided. (It <em>did</em> own 1.4&nbsp;billion pounds of cheese once. <button class="why-caves-link" id="why-caves-link" type="button">That story lives in The Weird Stuff&nbsp;↗</button>)</p>
+          </section>
+
+          <!-- ROW 3 — Narrative slab + Chart strip -->
 
           <section class="editorial-panel editorial-panel--paper narrative-panel" data-span="narrative">
             <div>
@@ -172,7 +196,7 @@
             </div>
             <div class="cave-stack" id="cave-stack"></div>
             <p class="panel-footnote-text">
-              Width reflects relative storage volume — American, Swiss, other natural, and butter as the bright outer puck.
+              Width reflects relative storage volume — American, Swiss, and butter as the bright outer puck.
             </p>
           </section>
 
@@ -202,7 +226,21 @@
             <p class="attribution">USDA NASS data.</p>
           </section>
 
-          <!-- ROW 4 — Full-width ranking table -->
+          <!-- ROW 5 — This month in the freezer: the script vs. the tape -->
+
+          <section class="editorial-panel editorial-panel--paper month-panel" data-span="month">
+            <div class="panel-top">
+              <div>
+                <p class="eyebrow">This month in the freezer</p>
+                <h2 class="panel-title" id="month-title">The script vs. the tape.</h2>
+              </div>
+              <p class="mini-note" id="month-note"></p>
+            </div>
+            <div class="month-cards" id="month-cards"></div>
+            <p class="panel-footnote-text">"Script" is the commodity's average move for this calendar month across the archive. Tap a card for the full story.</p>
+          </section>
+
+          <!-- ROW 6 — Full-width ranking table -->
 
           <section class="editorial-panel editorial-panel--ink ranking-panel" data-span="table">
             <div class="panel-top">
@@ -268,6 +306,44 @@
         </section>
 
         <section class="dc-section">
+          <h3 class="category-banner">The legend is real</h3>
+          <div class="cave-story">
+            <div class="cave-story-head">
+              <p class="eyebrow eyebrow--light">Missouri · 36°F · a chapter of US agricultural history</p>
+              <h2 class="cave-story-headline">There really were government cheese caves.</h2>
+            </div>
+            <div class="cave-story-beats">
+              <div class="cave-story-beat">
+                <p class="cave-story-year">1970s</p>
+                <p class="cave-story-beat-title">The milk mountain</p>
+                <p class="cave-story-beat-copy">Fighting shortages and inflation, Washington subsidized dairy hard — and farmers delivered. Milk spoils, so the government bought the surplus and pressed it into things that keep: processed cheese, butter, dry milk.</p>
+              </div>
+              <div class="cave-story-beat">
+                <p class="cave-story-year">The caves</p>
+                <p class="cave-story-beat-title">Underground Missouri</p>
+                <p class="cave-story-beat-copy">The stockpile needed a home and found one in converted limestone mines near Springfield and Kansas City — football-field caverns holding a natural 36°F. Over <strong>1.4&nbsp;billion pounds</strong> of American, cheddar, and Swiss went under the ground.</p>
+              </div>
+              <div class="cave-story-beat">
+                <p class="cave-story-year">1981</p>
+                <p class="cave-story-beat-title">"Government cheese"</p>
+                <p class="cave-story-beat-copy">To shrink the mountain, the Reagan administration began handing out five-pound blocks through food-assistance and military programs. A generation learned exactly what government cheese tasted like.</p>
+              </div>
+              <div class="cave-story-beat">
+                <p class="cave-story-year">Today</p>
+                <p class="cave-story-beat-title">Counted, not owned</p>
+                <p class="cave-story-beat-copy">The federal vault is history — the same caves now store food for private companies like Kraft Heinz and Nestlé. The government's role became the one this site runs on: it counts the nation's cheese instead of owning it.</p>
+              </div>
+            </div>
+            <div class="cave-story-now">
+              <p class="cave-story-now-label">Natural cheese in commercial cold storage right now</p>
+              <p class="cave-story-now-value"><span id="cave-story-now">—</span><span class="cave-story-now-unit"> lb</span></p>
+              <p class="cave-story-now-note">A stockpile the size of the old federal one — only this time, nobody had to buy it.</p>
+            </div>
+            <p class="attribution">Sources: The Farmlink Project · Ambrook · All That's Interesting</p>
+          </div>
+        </section>
+
+        <section class="dc-section">
           <h3 class="category-banner">Freezer records · highs and lows of this 5-year archive</h3>
           <div class="dc-records-grid" id="dc-records"></div>
         </section>
@@ -312,6 +388,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=4"></script>
+    <script type="module" src="./app.js?v=11"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-const DATA_URL = "./data/cold-storage-archive.json?v=2";
+const DATA_URL = "./data/cold-storage-archive.json?v=3";
 const US_POPULATION = 335_000_000;
 
 // ---------------------------------------------------------------------------
@@ -20,7 +20,6 @@ const COMMODITY_LABELS = {
   butter: "Butter",
   american_cheese: "American cheese",
   swiss_cheese: "Swiss cheese",
-  other_natural_cheese: "Other natural cheese",
   total_natural_cheese: "Total natural cheese",
   total_chicken: "Total chicken",
   total_turkey: "Total turkey",
@@ -38,7 +37,6 @@ const COMMODITY_GROUPS = {
   butter: "dairy",
   american_cheese: "dairy",
   swiss_cheese: "dairy",
-  other_natural_cheese: "dairy",
   total_natural_cheese: "dairy",
   total_chicken: "protein",
   total_turkey: "protein",
@@ -53,6 +51,13 @@ const COMMODITY_GROUPS = {
   veal: "protein",
   lamb_mutton: "protein",
   ducks: "protein",
+  boysenberries: "produce",
+  okra: "produce",
+  blackberries: "produce",
+  apricots: "produce",
+  brussels_sprouts: "produce",
+  cauliflower: "produce",
+  eggs: "dairy",
 };
 
 // Deep-cut commodity metadata
@@ -83,6 +88,14 @@ const DEEP_CUT_LABELS = {
   peas_green:      "Green peas",
   spinach:         "Spinach",
   broccoli:        "Broccoli",
+  // Curiosity commodities — proof the ledger goes deeper than you'd guess
+  boysenberries:   "Boysenberries",
+  okra:            "Okra",
+  blackberries:    "Blackberries",
+  apricots:        "Apricots",
+  brussels_sprouts: "Brussels sprouts",
+  cauliflower:     "Cauliflower",
+  eggs:            "Frozen eggs",
 };
 
 function labelFor(key) {
@@ -91,7 +104,7 @@ function labelFor(key) {
 
 // Base commodities with no overlap — used for the honest "All" ranking.
 const LEAF_KEYS = [
-  "butter", "american_cheese", "swiss_cheese", "other_natural_cheese",
+  "butter", "american_cheese", "swiss_cheese",
   "total_chicken", "total_turkey",
   "total_frozen_fruit", "total_frozen_vegetables", "total_frozen_potatoes",
   "total_beef", "total_pork",
@@ -107,31 +120,36 @@ const LEADER_KEYS = [
 // ---------------------------------------------------------------------------
 // Deep Cuts — full USDA inventory
 // ---------------------------------------------------------------------------
+// `reveal` is honest, not a stand-in for a number we don't have: none of
+// these six are in USDA's Cold Storage commodity map (see COMMODITY_MAP in
+// scripts/fetch-usda.py), so there's no monthly figure to count up. Clicking
+// surfaces that context instead of faking a value.
+// Every card is backed by a real archive series — tap to count it up.
 const DC_CURIOSITIES = [
-  { label: "Boysenberries",  color: "lavender", copy: "Yes, specifically boysenberries. A dedicated line item in the national cold storage ledger." },
-  { label: "Okra",           color: "kelp",     copy: "The South's frozen frontier — millions of pounds, quietly sitting in cold storage." },
-  { label: "Hops",           color: "cobalt",   copy: "Beer's raw material, stored cold before it becomes your weekend. Supply chain secured." },
-  { label: "Honey",          color: "sun",      copy: "Honey keeps for millennia on a shelf. In bulk, it gets the cold treatment anyway." },
-  { label: "Buttermilk",     color: "paper",    copy: "Frozen buttermilk reserves. The pancake supply chain runs deeper than you think." },
-  { label: "Pickles",        color: "coral",    copy: "Not frozen — refrigerated. But tracked with the same federal rigor as beef." },
+  { key: "boysenberries",    label: "Boysenberries",   color: "lavender", copy: "Yes, specifically boysenberries. A dedicated line item in the national cold storage ledger." },
+  { key: "okra",             label: "Okra",            color: "kelp",     copy: "The South's frozen frontier — tens of millions of pounds, quietly waiting." },
+  { key: "blackberries",     label: "Blackberries",    color: "cobalt",   copy: "Tracked two ways — loose and in barrels. Barrels of blackberries is its own federal statistic." },
+  { key: "apricots",         label: "Apricots",        color: "sun",      copy: "A fruit most people forget exists gets a monthly federal headcount." },
+  { key: "brussels_sprouts", label: "Brussels sprouts", color: "paper",   copy: "The vegetable you pushed around your plate is a matter of national record." },
+  { key: "eggs",             label: "Frozen eggs",     color: "coral",    copy: "You can freeze eggs — bakeries run on the stuff, and USDA counts every pound." },
 ];
 
 const DC_SECTIONS = {
   meat: {
-    tracked:   ["total_frozen_poultry", "total_chicken", "total_turkey", "total_frozen_red_meat", "total_beef", "total_pork", "pork_bellies", "pork_hams", "pork_ribs", "pork_loins", "pork_butts", "pork_trimmings", "beef_boneless", "beef_bone_in"],
-    discovery: ["Veal", "Lamb & Mutton", "Ducks"],
+    tracked:   ["total_frozen_poultry", "total_chicken", "total_turkey", "total_frozen_red_meat", "total_beef", "total_pork", "pork_bellies", "pork_hams", "pork_ribs", "pork_loins", "pork_butts", "pork_trimmings", "beef_boneless", "beef_bone_in", "veal", "lamb_mutton", "ducks"],
+    discovery: [],
   },
   dairy: {
-    tracked:   ["butter", "total_natural_cheese", "american_cheese", "swiss_cheese", "other_natural_cheese"],
-    discovery: ["Milk", "Buttermilk", "Whey", "Eggs"],
+    tracked:   ["butter", "total_natural_cheese", "american_cheese", "swiss_cheese", "eggs"],
+    discovery: [],
   },
   fruit: {
-    tracked:   ["total_frozen_fruit", "strawberries", "blueberries", "raspberries", "cherries_tart"],
-    discovery: ["Blackberries", "Boysenberries", "Apples", "Apricots", "Grapes", "Oranges", "Peaches", "Other Fruit"],
+    tracked:   ["total_frozen_fruit", "strawberries", "blueberries", "raspberries", "blackberries", "boysenberries", "cherries_tart", "apricots"],
+    discovery: ["Apples", "Grapes", "Oranges", "Peaches", "Other Fruit"],
   },
   vegetables: {
-    tracked:   ["total_frozen_vegetables", "total_frozen_potatoes", "sweet_corn_cut", "sweet_corn_cob", "beans_green", "peas_green", "carrots", "broccoli", "spinach"],
-    discovery: ["Asparagus", "Brussels Sprouts", "Cauliflower", "Greens", "Okra", "Onions", "Peas & Carrots", "Squash", "Mixed Vegetables", "Other Vegetables"],
+    tracked:   ["total_frozen_vegetables", "total_frozen_potatoes", "sweet_corn_cut", "sweet_corn_cob", "beans_green", "peas_green", "carrots", "broccoli", "spinach", "brussels_sprouts", "cauliflower", "okra"],
+    discovery: ["Asparagus", "Greens", "Onions", "Peas & Carrots", "Squash", "Mixed Vegetables", "Other Vegetables"],
   },
 };
 
@@ -154,8 +172,11 @@ const RECORD_KEYS = [
 // variants show the marker.
 // ---------------------------------------------------------------------------
 const TREND_EVENTS = [
-  { month: "2022-02", label: "Bird flu reaches US commercial flocks", filters: ["protein"] },
+  { month: "2022-02", label: "Bird flu reaches US commercial flocks", filters: ["all", "protein"] },
   { month: "2022-10", label: "Butter stocks scrape multi-year lows — shortage headlines", filters: ["dairy"] },
+  { month: "2023-07", label: "California's Prop 12 animal-housing rules hit the pork market", filters: ["protein"] },
+  { month: "2024-03", label: "H5N1 bird flu detected in US dairy cattle for the first time", filters: ["all", "dairy"] },
+  { month: "2025-01", label: "USDA: cattle herd smallest since 1951 — beef supply tightens", filters: ["all", "protein"] },
 ];
 
 // Curated seasonal one-liners. Every headline commodity gets one so the
@@ -164,7 +185,6 @@ const SEASONAL_NOTES = {
   butter: "Stocks swell through the spring–summer milk flush, then draw down hard into holiday baking.",
   american_cheese: "Aging pipelines keep it steady — a slow spring build, a gentle autumn drawdown.",
   swiss_cheese: "Long aging smooths the curve: a quiet late-winter peak, a slow summer slide.",
-  other_natural_cheese: "Tracks the milk supply — builds through summer, eases as the holidays pull it out.",
   total_natural_cheese: "Cheese aging cellars fill on the summer milk flush and empty toward year-end.",
   total_chicken: "Steady birds most of the year, then a late-fall build ahead of winter demand.",
   total_turkey: "Builds all summer as birds are processed — then Thanksgiving empties the freezer overnight.",
@@ -180,6 +200,16 @@ const SEASONAL_NOTES = {
   strawberries: "The June harvest floods the freezer in one great wave, then recedes all year.",
   blueberries: "A tight late-summer pack spikes stocks, which ebb through the winter.",
   sweet_corn_cut: "The fall pack fills the freezer; stocks slide until next year's harvest.",
+  veal: "A small, steady reserve that moves with the dairy calendar more than the grill.",
+  lamb_mutton: "Builds toward spring — lamb's biggest moments are Easter and holiday tables.",
+  ducks: "Quiet most of the year, then a late-autumn build for holiday roasts.",
+  boysenberries: "One short early-summer harvest stocks the whole year's supply.",
+  blackberries: "The July pick fills the freezer; pies and smoothies drain it all winter.",
+  apricots: "A brief early-summer window — miss the pack and there's no second chance.",
+  brussels_sprouts: "A fall-harvest vegetable banked ahead of its Thanksgiving-table moment.",
+  cauliflower: "The fall pack builds stocks; year-round demand pulls them steadily down.",
+  okra: "A late-summer southern harvest, frozen at its peak and eaten through the year.",
+  eggs: "Bakeries bank frozen egg ahead of holiday baking, then draw it down through spring.",
 };
 
 // ---------------------------------------------------------------------------
@@ -190,7 +220,6 @@ const INSIGHT_RECIPES = {
   total_natural_cheese: { unit: "1-lb blocks",        one: "1-lb block",          lbPerUnit: 1 },
   american_cheese:      { unit: "slices",             one: "slice",               lbPerUnit: 0.0625 },
   swiss_cheese:         { unit: "slices",             one: "slice",               lbPerUnit: 0.0625 },
-  other_natural_cheese: { unit: "1-lb blocks",        one: "1-lb block",          lbPerUnit: 1 },
   total_chicken:        { unit: "whole birds",        one: "whole bird",          lbPerUnit: 5 },
   total_turkey:         { unit: "whole turkeys",      one: "whole turkey",        lbPerUnit: 16 },
   total_frozen_poultry: { unit: "whole birds",        one: "whole bird",          lbPerUnit: 5 },
@@ -205,6 +234,16 @@ const INSIGHT_RECIPES = {
   pork_hams:            { unit: "holiday hams",       one: "holiday ham",         lbPerUnit: 8 },
   pork_butts:           { unit: "pulled-pork sandwiches", one: "pulled-pork sandwich", lbPerUnit: 0.33 },
   pork_trimmings:       { unit: "breakfast sausages", one: "breakfast sausage",   lbPerUnit: 0.06 },
+  veal:                 { unit: "veal cutlets",       one: "veal cutlet",         lbPerUnit: 0.3 },
+  lamb_mutton:          { unit: "lamb chops",         one: "lamb chop",           lbPerUnit: 0.3 },
+  ducks:                { unit: "whole ducks",        one: "whole duck",          lbPerUnit: 5.5 },
+  boysenberries:        { unit: "pints of boysenberries", one: "pint of boysenberries", lbPerUnit: 0.75 },
+  blackberries:         { unit: "pints of blackberries",  one: "pint of blackberries",  lbPerUnit: 0.75 },
+  apricots:             { unit: "apricots",           one: "apricot",             lbPerUnit: 0.25 },
+  brussels_sprouts:     { unit: "servings of sprouts", one: "serving of sprouts",  lbPerUnit: 0.5 },
+  cauliflower:          { unit: "heads of cauliflower", one: "head of cauliflower", lbPerUnit: 2 },
+  okra:                 { unit: "servings of okra",   one: "serving of okra",     lbPerUnit: 0.5 },
+  eggs:                 { unit: "eggs' worth",        one: "egg's worth",         lbPerUnit: 0.11 },
   total_frozen_fruit:   { unit: "pints of berries",   one: "pint of berries",     lbPerUnit: 0.75 },
   strawberries:         { unit: "pints of strawberries", one: "pint of strawberries", lbPerUnit: 0.75 },
   blueberries:          { unit: "pints of blueberries",  one: "pint of blueberries",  lbPerUnit: 0.75 },
@@ -281,14 +320,23 @@ const categoryDefinitions = {
   dairy: {
     title: "Dairy storage — from butter to aged natural cheese",
     rankingNote: "Sorted by latest dairy storage volume",
-    commodities: ["butter", "american_cheese", "swiss_cheese", "other_natural_cheese", "total_natural_cheese"],
+    commodities: ["butter", "american_cheese", "swiss_cheese", "total_natural_cheese"],
     aggregateKeys: ["butter", "total_natural_cheese"],
+    // Eggs live in the dairy aisle but are NOT part of the dairy totals.
+    components: ["eggs"],
+    componentsNote: "Also in the dairy aisle · counted separately from the totals above",
   },
   produce: {
     title: "Produce storage — fruit, vegetables, and frozen potatoes",
     rankingNote: "Sorted by latest produce storage volume",
     commodities: ["total_frozen_vegetables", "total_frozen_potatoes", "total_frozen_fruit"],
     aggregateKeys: ["total_frozen_fruit", "total_frozen_vegetables", "total_frozen_potatoes"],
+    components: [
+      "strawberries", "blueberries", "raspberries", "blackberries", "boysenberries",
+      "cherries_tart", "apricots", "sweet_corn_cut", "sweet_corn_cob", "beans_green",
+      "peas_green", "carrots", "broccoli", "spinach", "brussels_sprouts", "cauliflower", "okra",
+    ],
+    componentsNote: "Components & cuts · already counted in the totals above",
   },
   protein: {
     title: "Protein storage — where freezer pressure actually sits",
@@ -302,6 +350,11 @@ const categoryDefinitions = {
       "total_beef",
       "pork_bellies",
     ],
+    components: [
+      "pork_hams", "pork_loins", "pork_butts", "pork_ribs", "pork_trimmings",
+      "beef_boneless", "beef_bone_in", "veal", "lamb_mutton", "ducks",
+    ],
+    componentsNote: "Components & cuts · already counted in the totals above",
     aggregateKeys: ["total_frozen_red_meat", "total_frozen_poultry"],
   },
 };
@@ -426,7 +479,7 @@ function buildCompatData(archive) {
   const commodities = {};
   for (const key of Object.keys(latest.commodities)) {
     commodities[key] = {
-      label: COMMODITY_LABELS[key] || key,
+      label: labelFor(key),
       group: COMMODITY_GROUPS[key] || "other",
       values: {
         yearAgo: yearAgo.commodities[key] || 0,
@@ -1028,7 +1081,6 @@ function renderCave(data) {
   const layers = [
     { key: "american_cheese", className: "american", label: "American" },
     { key: "swiss_cheese", className: "swiss", label: "Swiss" },
-    { key: "other_natural_cheese", className: "other", label: "Other natural" },
     { key: "butter", className: "butter", label: "Butter" },
   ];
   const validLayers = layers.filter((item) => data.commodities[item.key]);
@@ -1355,22 +1407,52 @@ function renderRanking(data, filter, {
   const maxLatest = Math.max(...items.map((item) => item.latest));
   if (rankingNote) rankingNote.textContent = categoryDefinitions[filter].rankingNote;
 
-  rankingList.innerHTML = items
-    .map((item) => {
-      const width = (item.latest / maxLatest) * 100;
-      const deltaClass = item.mom >= 0 ? "delta--up" : "delta--down";
-      const fmt = formatHeadlineValue(item.key, item.latest);
-      return `
-        <article class="ranking-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
-          <p class="ranking-name">${escapeHtml(item.label)}</p>
-          <div class="ranking-bar-shell">
-            <div class="ranking-bar-fill" style="width:${width}%"></div>
-          </div>
-          <p class="ranking-value">${fmt.num} ${fmt.unit}</p>
-          <p class="ranking-change ${deltaClass}">${formatPercent(item.mom)}</p>
-        </article>`;
-    })
-    .join("");
+  const rowFor = (item) => {
+    const width = (item.latest / maxLatest) * 100;
+    const deltaClass = item.mom >= 0 ? "delta--up" : "delta--down";
+    const fmt = formatHeadlineValue(item.key, item.latest);
+    return `
+      <article class="ranking-row"${item.key ? ` data-commodity-key="${item.key}" role="button" tabindex="0"` : ""}>
+        <p class="ranking-name">${escapeHtml(item.label)}</p>
+        <div class="ranking-bar-shell">
+          <div class="ranking-bar-fill" style="width:${width}%"></div>
+        </div>
+        <p class="ranking-value">${fmt.num} ${fmt.unit}</p>
+        <p class="ranking-change ${deltaClass}">${formatPercent(item.mom)}</p>
+      </article>`;
+  };
+
+  // Deep-cut components ride below a divider — same bar scale, so a ham bar
+  // can be honestly eyeballed against the total-pork bar it lives inside.
+  let componentRows = "";
+  const componentKeys = categoryDefinitions[filter].components || [];
+  if (componentKeys.length) {
+    const comps = componentKeys
+      .map((key) => {
+        const c = data.commodities[key];
+        if (!c?.values?.latest) return null;
+        return {
+          key,
+          label: labelFor(key),
+          latest: c.values.latest,
+          mom: calculateChange(c.values.previousMonth, c.values.latest),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.latest - a.latest);
+    const shown = comps.slice(0, 8);
+    if (shown.length) {
+      const note = categoryDefinitions[filter].componentsNote || "Components & cuts";
+      componentRows =
+        `<p class="ranking-divider">${escapeHtml(note)}</p>` +
+        shown.map(rowFor).join("") +
+        (comps.length > shown.length
+          ? `<p class="ranking-more">+ ${comps.length - shown.length} more in The Weird Stuff</p>`
+          : "");
+    }
+  }
+
+  rankingList.innerHTML = items.map(rowFor).join("") + componentRows;
 }
 
 // ---------------------------------------------------------------------------
@@ -1379,7 +1461,7 @@ function renderRanking(data, filter, {
 const TT_COLORS = {
   dairy:   { line: "#8a6a22", bg: "dairy"   },
   produce: { line: "#2e5c1e", bg: "produce" },
-  protein: { line: "#b84a1c", bg: "protein" },
+  protein: { line: "#3456d1", bg: "protein" },
 };
 
 function renderThroughTime(data, filter = "all") {
@@ -1584,6 +1666,76 @@ function renderSeasonality(data) {
 }
 
 // ---------------------------------------------------------------------------
+// Render: This month in the freezer — seasonal script vs. actual tape
+// ---------------------------------------------------------------------------
+function renderMonthInFreezer(data) {
+  const wrap = document.getElementById("month-cards");
+  if (!wrap) return;
+  const latest = getLatestSnapshot(data.archive);
+  const m = new Date(latest.observationDate + "T12:00:00Z").getUTCMonth();
+  const monthName = MONTH_NAMES[m];
+  const note = document.getElementById("month-note");
+  if (note) note.textContent = `${monthName} · what should move vs. what did`;
+
+  const rows = [];
+  for (const key of Object.keys(COMMODITY_LABELS)) {
+    const idx = seasonalIndex(data.archive, key);
+    if (!idx) continue;
+    const prevIdx = idx[(m + 11) % 12];
+    const curIdx = idx[m];
+    if (prevIdx == null || curIdx == null) continue;
+    const values = data.commodities[key]?.values;
+    if (!values?.previousMonth || !values?.latest) continue;
+    // Expected MoM move, in points of the commodity's own average (≈ %)
+    const expected = ((curIdx - prevIdx) / prevIdx) * 100;
+    const actual = calculateChange(values.previousMonth, values.latest);
+    rows.push({ key, expected, actual, deviation: actual - expected });
+  }
+  if (rows.length < 3) return;
+
+  const climber = rows.reduce((a, b) => (b.expected > a.expected ? b : a));
+  const faller = rows.reduce((a, b) => (b.expected < a.expected ? b : a));
+  const offScript = rows
+    .filter((r) => r.key !== climber.key && r.key !== faller.key)
+    .reduce((a, b) => (Math.abs(b.deviation) > Math.abs(a.deviation) ? b : a));
+
+  const fmtScript = (v) => `${v >= 0 ? "+" : ""}${Math.round(v)}%`;
+  const verdictFor = (r) => {
+    const sameDirection = (r.expected >= 0) === (r.actual >= 0);
+    if (Math.abs(r.deviation) < 3) return "right on script.";
+    if (sameDirection) return r.deviation > 0 ? "on script, running hot." : "on script, running cool.";
+    return "breaking the script.";
+  };
+
+  const card = (r, tag, tagClass) => {
+    const why = SEASONAL_NOTES[r.key] || "";
+    const deltaClass = r.actual >= 0 ? "delta--up" : "delta--down";
+    return `
+      <article class="month-card" data-commodity-key="${r.key}" role="button" tabindex="0" aria-label="${labelFor(r.key)} — typical ${monthName} ${fmtScript(r.expected)}, this year ${formatPercent(r.actual)}">
+        <p class="month-card-tag ${tagClass}">${tag}</p>
+        <h3 class="month-card-name">${escapeHtml(labelFor(r.key))}</h3>
+        ${why ? `<p class="month-card-why">${why}</p>` : ""}
+        <p class="month-card-verdict">Typical ${monthName}: <strong>${fmtScript(r.expected)}</strong> · this year: <strong class="${deltaClass}">${formatPercent(r.actual)}</strong> — ${verdictFor(r)}</p>
+      </article>`;
+  };
+
+  wrap.innerHTML =
+    card(climber, "The builder", "month-card-tag--build") +
+    card(faller, "The drainer", "month-card-tag--drain") +
+    card(offScript, "Off script", "month-card-tag--off");
+}
+
+// The "why" strip's cheese-caves teaser hops straight to the Deep Cuts story.
+function bindWhyStripLink() {
+  const link = document.getElementById("why-caves-link");
+  if (!link) return;
+  link.addEventListener("click", () => {
+    document.querySelector('[data-tab="deep-cuts"]')?.click();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Render: Deep Cuts
 // ---------------------------------------------------------------------------
 function renderDcTrackedTile(archive, key) {
@@ -1626,24 +1778,45 @@ function renderDcTrackedTile(archive, key) {
 }
 
 // Discovery names that map to a real archive key — once the pipeline collects
-// them, the chip upgrades from "no series" to a current stored amount.
-const DISCOVERY_KEYS = {
-  "Veal": "veal",
-  "Lamb & Mutton": "lamb_mutton",
-  "Ducks": "ducks",
-};
+// them, the chip upgrades from "no series" to a click-to-reveal amount.
+// (Veal, Lamb & Mutton, and Ducks graduated to full tracked tiles.)
+const DISCOVERY_KEYS = {};
+
+// Count a number up from 0 to `targetLb` (raw lb) inside `el`, formatting each
+// frame with formatCompact. Honors reduced-motion by jumping to the final value.
+function animateCountUp(el, targetLb, { duration = 900 } = {}) {
+  const finalText = formatCompact.format(targetLb);
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = finalText;
+    return;
+  }
+  const start = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    el.textContent = formatCompact.format(targetLb * ease(t));
+    if (t < 1) requestAnimationFrame(frame);
+    else el.textContent = finalText;
+  }
+  requestAnimationFrame(frame);
+}
 
 function renderDcDiscoveryChip(archive, name) {
   const key = DISCOVERY_KEYS[name];
   const known = key ? lastKnown(archive, key) : null;
 
-  // We have a latest value but no meaningful monthly trend — show the amount.
+  // Real value, but no headline trend — keep it a hidden-feature reveal: the
+  // amount stays hidden until the user taps, then counts up. `data-commodity-key`
+  // is intentionally omitted here and only added after the reveal (see
+  // bindDiscoveryReveal) so the first tap animates instead of opening the modal.
   if (known) {
     const asOf = known.monthsStale > 0 ? `as of ${shortMonthYear(known.date)}` : "latest month";
-    return `<div class="dc-chip dc-chip--valued" data-commodity-key="${key}" role="button" tabindex="0" aria-label="${escapeHtml(name)}: ${formatCompact.format(known.value * 1000)} lb">
+    const lb = known.value * 1000;
+    return `<div class="dc-chip dc-chip--valued dc-chip--reveal" data-reveal-lb="${lb}" data-reveal-key="${key}" role="button" tabindex="0" aria-expanded="false" aria-label="${escapeHtml(name)} — tap to reveal amount in cold storage">
         <p class="dc-chip-eyebrow">Also tracked</p>
         <p class="dc-chip-name">${escapeHtml(name)}</p>
-        <p class="dc-chip-value">${formatCompact.format(known.value * 1000)}<span class="dc-tile-unit"> lb</span></p>
+        <p class="dc-chip-value" aria-hidden="true"><span class="dc-chip-value-num">0</span><span class="dc-tile-unit"> lb</span></p>
+        <p class="dc-chip-prompt">Tap to reveal ↑</p>
         <p class="dc-chip-note">${asOf}</p>
       </div>`;
   }
@@ -1656,12 +1829,35 @@ function renderDcDiscoveryChip(archive, name) {
     </div>`;
 }
 
+// First tap on a valued discovery chip reveals + counts up the amount; once
+// revealed it gains data-commodity-key so a further tap opens the full modal.
+function bindDiscoveryReveal(container) {
+  container.querySelectorAll(".dc-chip--reveal").forEach((chip) => {
+    const reveal = () => {
+      if (chip.classList.contains("is-revealed")) return;
+      chip.classList.add("is-revealed");
+      chip.setAttribute("aria-expanded", "true");
+      animateCountUp(chip.querySelector(".dc-chip-value-num"), Number(chip.dataset.revealLb));
+      chip.dataset.commodityKey = chip.dataset.revealKey; // enable modal on next tap
+    };
+    chip.addEventListener("click", (e) => {
+      if (!chip.classList.contains("is-revealed")) { e.stopPropagation(); reveal(); }
+    });
+    chip.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && !chip.classList.contains("is-revealed")) {
+        e.preventDefault(); e.stopPropagation(); reveal();
+      }
+    });
+  });
+}
+
 function renderDcMixedSection(archive, containerId, { tracked, discovery }) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML =
     tracked.map((key) => renderDcTrackedTile(archive, key)).join("") +
     discovery.map((name) => renderDcDiscoveryChip(archive, name)).join("");
+  bindDiscoveryReveal(container);
   // Draw sparklines after paint
   requestAnimationFrame(() => {
     tracked.forEach((key) => {
@@ -1715,18 +1911,65 @@ function renderFreezerRecords(archive) {
   container.innerHTML = cards.join("");
 }
 
+// Toggle a curiosity card open/closed to reveal the honest "why no number"
+// line. Click and keyboard both work; cards are independent.
+function bindCuriosityCards(container) {
+  container.querySelectorAll(".dc-curiosity-card").forEach((card) => {
+    const activate = (e) => {
+      // First tap: reveal the amount with a count-up. The card only gains
+      // data-commodity-key after the reveal, so the second tap opens the modal
+      // via the global delegation instead of re-animating.
+      if (card.classList.contains("dc-curiosity-card--reveal") && !card.classList.contains("is-open")) {
+        e.stopPropagation();
+        card.classList.add("is-open");
+        card.setAttribute("aria-expanded", "true");
+        animateCountUp(card.querySelector(".dc-curiosity-value-num"), Number(card.dataset.revealLb));
+        card.dataset.commodityKey = card.dataset.revealKey;
+      }
+    };
+    card.addEventListener("click", activate);
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(e); }
+    });
+  });
+}
+
 function renderDeepCuts(data) {
   const { archive } = data;
 
-  // Curiosities
+  // Curiosities — every card backed by a real series; tap to count it up
   const curiosEl = document.getElementById("dc-curiosities");
   if (curiosEl) {
-    curiosEl.innerHTML = DC_CURIOSITIES.map(({ label, color, copy }) => `
-      <div class="dc-curiosity-card dc-curiosity-card--${color}">
-        <p class="dc-curiosity-eyebrow">USDA tracks this</p>
-        <p class="dc-curiosity-name">${label}.</p>
-        <p class="dc-curiosity-copy">${copy}</p>
-      </div>`).join("");
+    curiosEl.innerHTML = DC_CURIOSITIES.map(({ key, label, color, copy }) => {
+      const known = key ? lastKnown(archive, key) : null;
+      if (!known) {
+        return `
+          <div class="dc-curiosity-card dc-curiosity-card--${color}">
+            <p class="dc-curiosity-eyebrow">USDA tracks this</p>
+            <p class="dc-curiosity-name">${label}.</p>
+            <p class="dc-curiosity-copy">${copy}</p>
+            <p class="dc-curiosity-note">Still being counted — check back after the next data pull.</p>
+          </div>`;
+      }
+      const asOf = known.monthsStale > 0 ? `lb as of ${shortMonthYear(known.date)}` : "lb in storage right now";
+      return `
+        <div class="dc-curiosity-card dc-curiosity-card--${color} dc-curiosity-card--reveal" data-reveal-lb="${known.value * 1000}" data-reveal-key="${key}" role="button" tabindex="0" aria-expanded="false" aria-label="${escapeHtml(label)} — tap to reveal the stored amount">
+          <p class="dc-curiosity-eyebrow">USDA tracks this</p>
+          <p class="dc-curiosity-name">${label}.</p>
+          <p class="dc-curiosity-copy">${copy}</p>
+          <p class="dc-curiosity-value" aria-hidden="true"><span class="dc-curiosity-value-num">0</span> <span class="dc-curiosity-value-unit">${asOf}</span></p>
+          <p class="dc-curiosity-note dc-curiosity-note--after">Tap again for the full chart →</p>
+          <p class="dc-curiosity-prompt">Tap to count it</p>
+        </div>`;
+    }).join("");
+    bindCuriosityCards(curiosEl);
+  }
+
+  // Cheese caves story — live tie-in to today's natural cheese stocks
+  const caveNow = document.getElementById("cave-story-now");
+  if (caveNow) {
+    const cheese = data.commodities.total_natural_cheese?.values.latest;
+    caveNow.textContent = cheese ? formatCompact.format(cheese * 1000) : "—";
   }
 
   renderFreezerRecords(archive);
@@ -2075,16 +2318,10 @@ function bindFilters(data) {
 function bindUnitToggle(data) {
   const trigger = document.getElementById("hero-number-row");
   if (!trigger) return;
-  const hint = document.getElementById("hero-tap-hint");
   const flip = () => {
     state.perCapita = !state.perCapita;
     trigger.classList.toggle("is-active", state.perCapita);
     trigger.setAttribute("aria-pressed", String(state.perCapita));
-    if (hint) {
-      hint.textContent = state.perCapita
-        ? "Your share of the freezer. Click to zoom back out."
-        : "Click the number to see your share of it.";
-    }
     rerenderForState(data);
   };
   trigger.addEventListener("click", flip);
@@ -2146,9 +2383,11 @@ async function init() {
   renderHero(data);
   renderEditorialTiles(data);
   renderCave(data);
+  renderMonthInFreezer(data);
   bindFilters(data);
   bindTabRouter(data);
   bindUnitToggle(data);
+  bindWhyStripLink();
   bindModal();
   bindResize(data);
 }
