@@ -424,18 +424,139 @@ a {
   .month-cards { grid-template-columns: 1fr; }
 }
 
-/* ── Overview category bands (continuous scroll) ─────────── */
-.category-section {
-  margin-top: var(--ed-space-6);
-  scroll-margin-top: 80px; /* clear the sticky rail on jump-scroll */
+/* ── Overview category teasers (3 columns, click to expand) ── */
+.category-teasers-head {
+  margin: var(--ed-space-6) 0 var(--ed-space-3);
+  scroll-margin-top: 80px;
+}
+.category-teasers-head .view-title { margin: 0.2rem 0 0; }
+
+.category-teasers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ed-space-3);
 }
 
-.category-section-head {
+.category-teaser {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+  border: var(--ed-line);
+  border-radius: 4px;
+  background: var(--ed-paper-2);
+  color: var(--ed-ink);
+  padding: var(--ed-space-4);
+  font: inherit;
+  min-height: 190px;
+  transition: transform 200ms var(--ed-spring), box-shadow 200ms var(--ed-spring), border-color 160ms ease;
+}
+
+.category-teaser:hover,
+.category-teaser:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(17, 17, 17, 0.1);
+}
+
+.category-teaser.is-open {
+  border-color: var(--ed-ink);
+  box-shadow: inset 0 0 0 1px var(--ed-ink);
+}
+
+.category-teaser-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.category-teaser-total {
+  font-family: var(--ed-font-display);
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.category-teaser-unit {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.category-teaser-lead {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.category-teaser-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ed-space-2);
+  margin-top: auto;
+  padding-top: var(--ed-space-3);
+}
+
+.category-teaser-mom { font-size: 0.82rem; font-weight: 700; }
+
+.category-teaser-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.category-teaser-chev { transition: transform 220ms var(--ed-spring); }
+.category-teaser.is-open .category-teaser-chev { transform: rotate(180deg); }
+
+.category-detail {
+  margin-top: var(--ed-space-3);
+  scroll-margin-top: 80px;
+  animation: detailReveal 320ms var(--ed-spring) both;
+}
+
+@keyframes detailReveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.category-detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ed-space-3);
   margin-bottom: var(--ed-space-3);
 }
+.category-detail-head .view-title { margin: 0; }
 
-.category-section-head .view-title {
-  margin: 0.2rem 0 0;
+.category-detail-close {
+  appearance: none;
+  border: var(--ed-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ed-ink);
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms ease;
+}
+.category-detail-close:hover { background: color-mix(in srgb, var(--ed-ink) 8%, transparent); }
+
+@media (max-width: 760px) {
+  .category-teasers { grid-template-columns: 1fr; }
 }
 
 /* A compact mosaic: chart wide on top, compare + ranking below */
@@ -682,10 +803,6 @@ a {
   background: rgb(255 255 255 / 0.1);
 }
 
-.cave-layer--american { background: linear-gradient(90deg, #ef7132, #f39a55); }
-.cave-layer--swiss    { background: linear-gradient(90deg, #cda8ef, #e1c5f6); }
-.cave-layer--butter   { background: linear-gradient(90deg, #dcc55b, #f0dd87); }
-
 .cave-layer-label {
   position: relative;
   z-index: 1;
@@ -897,6 +1014,22 @@ a {
   font-size: 0.75rem;
   color: var(--ed-paper-2);
   opacity: 0.5;
+}
+
+.ranking-more { transition: opacity 160ms ease; }
+.ranking-more:has(.ranking-more-link:hover),
+.ranking-more:has(.ranking-more-link:focus-visible) { opacity: 0.9; }
+
+.ranking-more-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 /* ── Animations ──────────────────────────────────────────── */
@@ -1689,6 +1822,27 @@ a {
 /* ── Seasonality view ────────────────────────────────────── */
 .seasonality-header {
   margin-bottom: var(--ed-space-4);
+}
+
+/* Divider between the seasonal-shape section and the raw archive below it */
+.rhythm-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--ed-space-3);
+  margin: var(--ed-space-6) 0 var(--ed-space-5);
+  scroll-margin-top: 80px;
+}
+.rhythm-divider-line {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--ed-ink) 18%, transparent);
+}
+.rhythm-divider-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.55;
 }
 
 .seasonality-now {

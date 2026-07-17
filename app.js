@@ -329,7 +329,7 @@ const categoryDefinitions = {
     aggregateKeys: ["butter", "total_natural_cheese"],
     // Eggs live in the dairy aisle but are NOT part of the dairy totals.
     components: ["eggs"],
-    componentsNote: "Also in the dairy aisle · counted separately from the totals above",
+    componentsNote: "Also in the dairy aisle",
   },
   produce: {
     title: "Produce storage — fruit, vegetables, and frozen potatoes",
@@ -1080,27 +1080,47 @@ function renderEditorialTiles(data) {
 // ---------------------------------------------------------------------------
 // Render: cheese cave art panel
 // ---------------------------------------------------------------------------
-function renderCave(data) {
-  const cave = document.getElementById("cave-stack");
-  const layers = [
-    { key: "american_cheese", className: "american", label: "American" },
-    { key: "swiss_cheese", className: "swiss", label: "Swiss" },
-    { key: "butter", className: "butter", label: "Butter" },
-  ];
-  const validLayers = layers.filter((item) => data.commodities[item.key]);
-  if (!validLayers.length) { cave.innerHTML = ""; return; }
-  const max = Math.max(...validLayers.map((item) => data.commodities[item.key].values.latest));
+// Bar gradients for the biggest-ticket stack (readable dark text on each).
+const BIGGEST_FILLS = [
+  "linear-gradient(90deg, #dcc55b, #f0dd87)", // sun
+  "linear-gradient(90deg, #ef7132, #f39a55)", // coral
+  "linear-gradient(90deg, #cda8ef, #e1c5f6)", // lavender
+  "linear-gradient(90deg, #c8a06b, #ddc199)", // sand
+  "linear-gradient(90deg, #7fa0f0, #a9c0f7)", // cobalt tint
+  "linear-gradient(90deg, #9fc08c, #c2d9b4)", // kelp tint
+  "linear-gradient(90deg, #e9dcc3, #f7efe0)", // paper
+];
 
-  cave.innerHTML = validLayers
+// Short display label for the big-ticket bars ("Total frozen vegetables" →
+// "Vegetables"); keeps the bar label from truncating.
+function shortCategoryLabel(key) {
+  const label = COMMODITY_LABELS[key] || labelFor(key);
+  const trimmed = label.replace(/^Total frozen /i, "").replace(/^Total /i, "");
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+// The All-Storage summary block: the biggest single categories in the entire
+// US cold-storage system, as bars scaled to each one's share of the mountain.
+function renderBiggestItems(data) {
+  const stack = document.getElementById("cave-stack");
+  if (!stack) return;
+  const items = GRAND_TOTAL_KEYS
+    .map((key) => ({ key, latest: data.commodities[key]?.values.latest || 0 }))
+    .filter((item) => item.latest > 0)
+    .sort((a, b) => b.latest - a.latest);
+  if (!items.length) { stack.innerHTML = ""; return; }
+  const max = items[0].latest;
+
+  stack.innerHTML = items
     .map((item, index) => {
-      const latest = data.commodities[item.key].values.latest;
-      const width = 52 + (latest / max) * 48;
-      const delay = index * 0.6;
+      const width = 52 + (item.latest / max) * 48;
+      const label = shortCategoryLabel(item.key);
+      const fill = BIGGEST_FILLS[index % BIGGEST_FILLS.length];
       return `
-        <div class="cave-layer cave-layer--${item.className}" style="width:${width}%; animation-delay:${delay}s;" data-commodity-key="${item.key}" role="button" tabindex="0" aria-label="${item.label}: ${formatCompact.format(latest * 1000)} lb — open detail">
+        <div class="cave-layer" style="width:${width}%; background:${fill}; animation-delay:${index * 0.5}s;" data-commodity-key="${item.key}" role="button" tabindex="0" aria-label="${escapeHtml(label)}: ${formatCompact.format(item.latest * 1000)} lb — open detail">
           <div class="cave-layer-label">
-            <span>${item.label}</span>
-            <span>${formatCompact.format(latest * 1000)} lb</span>
+            <span>${escapeHtml(label)}</span>
+            <span>${formatCompact.format(item.latest * 1000)} lb</span>
           </div>
         </div>`;
     })
@@ -1451,7 +1471,7 @@ function renderRanking(data, filter, {
         `<p class="ranking-divider">${escapeHtml(note)}</p>` +
         shown.map(rowFor).join("") +
         (comps.length > shown.length
-          ? `<p class="ranking-more">+ ${comps.length - shown.length} more in The Weird Stuff</p>`
+          ? `<p class="ranking-more">+ ${comps.length - shown.length} more in <button type="button" class="ranking-more-link" data-goto-tab="deep-cuts">The Weird Stuff&nbsp;↗</button></p>`
           : "");
     }
   }
@@ -1729,12 +1749,15 @@ function renderMonthInFreezer(data) {
     card(offScript, "Off script", "month-card-tag--off");
 }
 
-// The "why" strip's cheese-caves teaser hops straight to the Deep Cuts story.
-function bindWhyStripLink() {
-  const link = document.getElementById("why-caves-link");
-  if (!link) return;
-  link.addEventListener("click", () => {
-    document.querySelector('[data-tab="deep-cuts"]')?.click();
+// Delegated cross-tab jump: any element with [data-goto-tab] activates that
+// tab and scrolls to top. Covers the "why" strip's cheese-caves teaser, the
+// "+ N more in The Weird Stuff" ranking link, and anything added later.
+function bindTabJumps() {
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest("[data-goto-tab], #why-caves-link");
+    if (!trigger) return;
+    const tab = trigger.dataset.gotoTab || "deep-cuts";
+    document.querySelector(`[data-tab="${tab}"]`)?.click();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
@@ -2136,7 +2159,9 @@ function bindModal() {
 // ---------------------------------------------------------------------------
 // Tab router (hash-based: #overview, #through-time, #seasonality, #deep-cuts)
 // ---------------------------------------------------------------------------
-const VALID_TABS = ["overview", "through-time", "seasonality", "deep-cuts"];
+const VALID_TABS = ["overview", "rhythm", "deep-cuts"];
+// Legacy hashes from the old four-tab layout still resolve to the merged tab.
+const TAB_ALIASES = { "through-time": "rhythm", seasonality: "rhythm" };
 
 function bindTabRouter(data) {
   const tabs = document.querySelectorAll(".tab-pill[data-tab]");
@@ -2144,6 +2169,7 @@ function bindTabRouter(data) {
   let ttBound = false;
 
   function activate(tabId) {
+    tabId = TAB_ALIASES[tabId] || tabId;
     if (!VALID_TABS.includes(tabId)) tabId = "overview";
     state.tab = tabId;
     tabs.forEach((t) => {
@@ -2156,12 +2182,12 @@ function bindTabRouter(data) {
       v.classList.toggle("view-section--hidden", !matches);
     });
 
-    // Re-render the activated view so canvases pick up current size + state
-    if (tabId === "through-time") {
+    // The Rhythm tab holds both the seasonal shape and the full archive.
+    if (tabId === "rhythm") {
+      renderSeasonality(data);
       if (!ttBound) { bindThroughTimeFilters(data); ttBound = true; }
       else renderThroughTime(data, state.ttFilter);
     }
-    if (tabId === "seasonality") renderSeasonality(data);
     if (tabId === "deep-cuts") renderDeepCuts(data);
   }
 
@@ -2196,42 +2222,104 @@ function buildCategorySections() {
   const host = document.getElementById("category-sections");
   if (!host || host.dataset.built) return;
   host.dataset.built = "1";
-  host.innerHTML = OVERVIEW_SECTIONS.map(({ filter, eyebrow }) => `
-    <section class="category-section" id="section-${filter}" data-filter="${filter}">
-      <div class="category-section-head">
-        <p class="eyebrow">${eyebrow}</p>
+
+  const teasers = OVERVIEW_SECTIONS.map(({ filter, eyebrow }) => `
+    <button type="button" class="category-teaser" id="teaser-${filter}" data-filter="${filter}"
+            aria-expanded="false" aria-controls="detail-${filter}">
+      <span class="category-teaser-eyebrow">${eyebrow}</span>
+      <span class="category-teaser-total" id="teaser-total-${filter}">—</span>
+      <span class="category-teaser-unit" id="teaser-unit-${filter}">lb in cold storage</span>
+      <span class="category-teaser-lead" id="teaser-lead-${filter}"></span>
+      <span class="category-teaser-foot">
+        <span class="delta category-teaser-mom" id="teaser-mom-${filter}"></span>
+        <span class="category-teaser-cta">View breakdown <span class="category-teaser-chev" aria-hidden="true">▾</span></span>
+      </span>
+    </button>`).join("");
+
+  const detailMosaic = (filter, eyebrow) => `
+    <div class="category-mosaic">
+      <section class="editorial-panel editorial-panel--cobalt chart-panel">
+        <div class="panel-top"><div>
+          <p class="eyebrow eyebrow--light">5-year trend</p>
+          <h2 class="panel-title panel-title--light">${eyebrow} in cold storage</h2>
+        </div></div>
+        <div class="chart-strip-wrap">
+          <canvas class="trend-canvas" id="cat-canvas-${filter}" role="img" aria-label="${eyebrow} 5-year trend"></canvas>
+        </div>
+      </section>
+      <section class="editorial-panel editorial-panel--paper compare-panel">
+        <div class="panel-top"><div>
+          <p class="eyebrow">Year ago · last month · latest</p>
+          <h2 class="panel-title" id="cat-compare-title-${filter}">Storage mix</h2>
+        </div></div>
+        <div class="compare-grid" id="cat-compare-grid-${filter}"></div>
+        <p class="attribution">Bars scale from zero — the % badge carries the story.</p>
+      </section>
+      <section class="editorial-panel editorial-panel--ink ranking-panel">
+        <div class="panel-top">
+          <div>
+            <p class="eyebrow eyebrow--light">Operations list</p>
+            <h2 class="panel-title panel-title--light">${eyebrow}, ranked</h2>
+          </div>
+          <p class="mini-note mini-note--light" id="cat-ranking-note-${filter}"></p>
+        </div>
+        <div class="ranking-list" id="cat-ranking-list-${filter}"></div>
+      </section>
+    </div>`;
+
+  const details = OVERVIEW_SECTIONS.map(({ filter, eyebrow }) => `
+    <section class="category-detail" id="detail-${filter}" data-filter="${filter}" hidden>
+      <div class="category-detail-head">
         <h2 class="view-title">${escapeHtml(categoryDefinitions[filter].title)}</h2>
+        <button type="button" class="category-detail-close" data-close-filter="${filter}" aria-label="Collapse ${eyebrow}">Close ✕</button>
       </div>
-      <div class="category-mosaic">
-        <section class="editorial-panel editorial-panel--cobalt chart-panel">
-          <div class="panel-top"><div>
-            <p class="eyebrow eyebrow--light">5-year trend</p>
-            <h2 class="panel-title panel-title--light">${eyebrow} in cold storage</h2>
-          </div></div>
-          <div class="chart-strip-wrap">
-            <canvas class="trend-canvas" id="cat-canvas-${filter}" role="img" aria-label="${eyebrow} 5-year trend"></canvas>
-          </div>
-        </section>
-        <section class="editorial-panel editorial-panel--paper compare-panel">
-          <div class="panel-top"><div>
-            <p class="eyebrow">Year ago · last month · latest</p>
-            <h2 class="panel-title" id="cat-compare-title-${filter}">Storage mix</h2>
-          </div></div>
-          <div class="compare-grid" id="cat-compare-grid-${filter}"></div>
-          <p class="attribution">Bars scale from zero — the % badge carries the story.</p>
-        </section>
-        <section class="editorial-panel editorial-panel--ink ranking-panel">
-          <div class="panel-top">
-            <div>
-              <p class="eyebrow eyebrow--light">Operations list</p>
-              <h2 class="panel-title panel-title--light">${eyebrow}, ranked</h2>
-            </div>
-            <p class="mini-note mini-note--light" id="cat-ranking-note-${filter}"></p>
-          </div>
-          <div class="ranking-list" id="cat-ranking-list-${filter}"></div>
-        </section>
-      </div>
+      ${detailMosaic(filter, eyebrow)}
     </section>`).join("");
+
+  host.innerHTML = `
+    <div class="category-teasers-head" id="by-category">
+      <p class="eyebrow">By category</p>
+      <h2 class="view-title">Three aisles of the frozen mountain.</h2>
+      <p class="view-subtitle">Dairy, produce, and meat + poultry — the headline number for each. Open one for its full trend, storage mix, and ranked breakdown.</p>
+    </div>
+    <div class="category-teasers">${teasers}</div>
+    <div class="category-details">${details}</div>`;
+}
+
+// Plain lb (or per-American) formatter for a category total — no single
+// commodity key, so it can't use INSIGHT_RECIPES equivalences.
+function formatCategoryTotal(thousandLb) {
+  const lb = thousandLb * 1000;
+  if (state.perCapita) return { num: formatPerCapitaCount(lb / US_POPULATION), unit: "lb / American" };
+  return { num: formatCompact.format(lb), unit: "lb in cold storage" };
+}
+
+// Fill a teaser card's standout numbers (total, MoM, biggest single item).
+function renderCategoryTeaser(data, filter) {
+  const agg = buildAggregateSeries(data)[`${filter}_total`];
+  const totalEl = document.getElementById(`teaser-total-${filter}`);
+  if (agg && totalEl) {
+    const fmt = formatCategoryTotal(agg.values.latest);
+    totalEl.textContent = fmt.num;
+    const unitEl = document.getElementById(`teaser-unit-${filter}`);
+    if (unitEl) unitEl.textContent = fmt.unit;
+    const mom = calculateChange(agg.values.previousMonth, agg.values.latest);
+    const momEl = document.getElementById(`teaser-mom-${filter}`);
+    if (momEl) {
+      momEl.textContent = `${formatPercent(mom)} MoM`;
+      momEl.className = `delta category-teaser-mom ${mom >= 0 ? "delta--up" : "delta--down"}`;
+    }
+  }
+  const leadEl = document.getElementById(`teaser-lead-${filter}`);
+  if (leadEl) {
+    const leader = getSeriesForFilter(data, filter)
+      .filter((s) => s.values.latest > 0)
+      .sort((a, b) => b.values.latest - a.values.latest)[0];
+    if (leader) {
+      const lf = formatHeadlineValue(leader.key, leader.values.latest);
+      leadEl.innerHTML = `Biggest: <strong>${escapeHtml(leader.label)}</strong> · ${lf.num} ${lf.unit}`;
+    }
+  }
 }
 
 function renderCategorySection(data, filter, { animate = false } = {}) {
@@ -2261,41 +2349,19 @@ function renderAllStorageSection(data, { animate = false } = {}) {
   renderNarrative(data, "all");
 }
 
+// Which category details have had their (expensive) mosaic rendered. A detail
+// canvas can't be measured while hidden, so we render lazily on first open.
+const renderedCategoryDetails = new Set();
+
 function bindFilters(data) {
   state.overviewFilter = "all";
   const pills = document.querySelectorAll(".filter-rail .filter-pill");
 
   renderAllStorageSection(data, { animate: true });
   buildCategorySections();
+  OVERVIEW_SECTIONS.forEach(({ filter }) => renderCategoryTeaser(data, filter));
 
-  const sections = OVERVIEW_SECTIONS.map(({ filter }) => document.getElementById(`section-${filter}`));
-
-  // Render every band up front so content is always present even on a fast
-  // scroll or a deep link; the chart rises statically for now.
-  OVERVIEW_SECTIONS.forEach(({ filter }) => renderCategorySection(data, filter, { animate: false }));
-  const renderOnce = () => {}; // content already rendered; kept for the pill handler
-
-  // Replay each band's chart rise the first time it scrolls into view.
-  if ("IntersectionObserver" in window) {
-    const animated = new Set();
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        const filter = e.target.dataset.filter;
-        if (!e.isIntersecting || animated.has(filter)) continue;
-        animated.add(filter);
-        const canvas = document.getElementById(`cat-canvas-${filter}`);
-        if (!canvas) continue;
-        const values = buildCategorySparkline(data.archive, filter, 60);
-        const dates = data.archive.snapshots.slice(-values.length).map((s) => s.observationDate);
-        const opts = { lineColor: "#fbf5ea", fillOpacity: 0.14, padding: 12, lineWidth: 2, padLeft: 52, padBottom: 22, axes: { dates } };
-        animateSparkline(canvas, values, opts, () => attachSparklineHover(canvas, values, dates, opts), { duration: 800 });
-      }
-    }, { rootMargin: "0px 0px -25% 0px" });
-    sections.forEach((s) => s && io.observe(s));
-  }
-
-  // Scrollspy: highlight the pill for the section nearest the top.
-  const setActive = (filter) => {
+  const setActivePill = (filter) => {
     state.overviewFilter = filter;
     pills.forEach((p) => {
       const active = p.dataset.filter === filter;
@@ -2303,24 +2369,54 @@ function bindFilters(data) {
       p.setAttribute("aria-pressed", String(active));
     });
   };
-  if ("IntersectionObserver" in window) {
-    const spy = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.dataset.filter); });
-    }, { rootMargin: "-45% 0px -50% 0px" });
-    const allAnchor = document.querySelector(".editorial-dashboard-grid");
-    if (allAnchor) { allAnchor.dataset.filter = "all"; spy.observe(allAnchor); }
-    sections.forEach((s) => s && spy.observe(s));
-  }
 
-  // Pills jump-scroll to their section.
+  // Single-open accordion: opening one category collapses the others.
+  const setOpen = (filter, open) => {
+    const detail = document.getElementById(`detail-${filter}`);
+    const teaser = document.getElementById(`teaser-${filter}`);
+    if (!detail || !teaser) return;
+    detail.hidden = !open;
+    teaser.classList.toggle("is-open", open);
+    teaser.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    // Lazy first render (chart rises); later opens just redraw at current size.
+    renderCategorySection(data, filter, { animate: !renderedCategoryDetails.has(filter) });
+    renderedCategoryDetails.add(filter);
+  };
+
+  const openCategory = (filter, { scroll = true } = {}) => {
+    const wasOpen = !document.getElementById(`detail-${filter}`)?.hidden;
+    OVERVIEW_SECTIONS.forEach(({ filter: f }) => setOpen(f, false));
+    if (!wasOpen) {
+      setOpen(filter, true);
+      setActivePill(filter);
+      if (scroll) document.getElementById(`teaser-${filter}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      setActivePill("all");
+    }
+  };
+
+  // Teaser cards toggle their own detail.
+  OVERVIEW_SECTIONS.forEach(({ filter }) => {
+    document.getElementById(`teaser-${filter}`)?.addEventListener("click", () => openCategory(filter));
+  });
+
+  // Close buttons inside each detail.
+  document.querySelectorAll("[data-close-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => { setOpen(btn.dataset.closeFilter, false); setActivePill("all"); });
+  });
+
+  // Top filter rail: "All storage" jumps to the top summary; a category pill
+  // opens that category's breakdown.
   pills.forEach((pill) => {
     pill.addEventListener("click", () => {
       const f = pill.dataset.filter;
-      if (f !== "all") renderOnce(f); // ensure the band is populated before scrolling
-      const el = f === "all"
-        ? document.querySelector(".editorial-dashboard-grid")
-        : document.getElementById(`section-${f}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (f === "all") {
+        setActivePill("all");
+        document.querySelector(".editorial-dashboard-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        openCategory(f);
+      }
     });
   });
 }
@@ -2349,7 +2445,10 @@ function rerenderForState(data) {
   // The overview scroll shows every category at once — refresh the "all"
   // ranking plus each category band so per-capita values stay in sync.
   renderRanking(data, "all");
+  renderBiggestItems(data);
   OVERVIEW_SECTIONS.forEach(({ filter }) => {
+    renderCategoryTeaser(data, filter);
+    // Only re-rank a category detail that's actually been opened/rendered.
     if (document.getElementById(`cat-ranking-list-${filter}`)?.children.length) {
       renderRanking(data, filter, {
         list: document.getElementById(`cat-ranking-list-${filter}`),
@@ -2357,7 +2456,7 @@ function rerenderForState(data) {
       });
     }
   });
-  if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
+  if (state.tab === "rhythm") renderThroughTime(data, state.ttFilter);
   if (state.tab === "deep-cuts") renderDeepCuts(data);
 }
 
@@ -2371,14 +2470,16 @@ function bindResize(data) {
     timer = setTimeout(() => {
       if (state.tab === "overview") {
         renderChartStrip(data, "all");
-        // Redraw any category charts that have been rendered (no re-animation).
+        // Redraw only the open category detail (a hidden canvas has zero width).
         OVERVIEW_SECTIONS.forEach(({ filter }) => {
+          const detail = document.getElementById(`detail-${filter}`);
           const canvas = document.getElementById(`cat-canvas-${filter}`);
-          if (canvas && canvas._hoverCleanup) renderCategorySection(data, filter, { animate: false });
+          if (detail && !detail.hidden && canvas && canvas._hoverCleanup) {
+            renderCategorySection(data, filter, { animate: false });
+          }
         });
       }
-      if (state.tab === "through-time") renderThroughTime(data, state.ttFilter);
-      if (state.tab === "seasonality") renderSeasonality(data);
+      if (state.tab === "rhythm") { renderSeasonality(data); renderThroughTime(data, state.ttFilter); }
       if (state.tab === "deep-cuts") renderDeepCuts(data);
       if (state.modalKey) drawModalChart();
     }, 150);
@@ -2395,12 +2496,12 @@ async function init() {
   state.data = data;
   renderHero(data);
   renderEditorialTiles(data);
-  renderCave(data);
+  renderBiggestItems(data);
   renderMonthInFreezer(data);
   bindFilters(data);
   bindTabRouter(data);
   bindUnitToggle(data);
-  bindWhyStripLink();
+  bindTabJumps();
   bindModal();
   bindResize(data);
 }

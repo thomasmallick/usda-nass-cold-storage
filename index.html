@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
     <meta name="twitter:image" content="./assets/og-image.png" />
 
-    <link rel="stylesheet" href="./styles.css?v=17" />
+    <link rel="stylesheet" href="./styles.css?v=19" />
   </head>
   <body>
     <div class="editorial-dashboard-shell" data-mode="editorial-mosaic">
@@ -36,8 +36,7 @@
       ════════════════════════════════════════════ -->
       <nav class="tab-bar" role="tablist" aria-label="Dashboard views">
         <button class="tab-pill tab-pill--active" data-tab="overview" type="button" role="tab" aria-selected="true">The Big Picture</button>
-        <button class="tab-pill" data-tab="seasonality" type="button" role="tab" aria-selected="false">The Rhythm</button>
-        <button class="tab-pill" data-tab="through-time" type="button" role="tab" aria-selected="false">The Archive</button>
+        <button class="tab-pill" data-tab="rhythm" type="button" role="tab" aria-selected="false">The Rhythm</button>
         <button class="tab-pill" data-tab="deep-cuts" type="button" role="tab" aria-selected="false">The Weird Stuff</button>
       </nav>
 
@@ -130,7 +129,7 @@
             <div class="why-strip-top">
               <h2 class="why-strip-headline">Harvests are moments. Appetite is constant.</h2>
               <blockquote class="why-strip-quote">
-                &ldquo;Any society is just <span class="why-strip-quote-emph">nine missed meals</span> from chaos.&rdquo;
+                &ldquo;Society is just <span class="why-strip-quote-emph">nine missed meals</span> from chaos.&rdquo;
                 <cite>Three skipped meals a day, three days of empty shelves, and order starts to fray — the old warning about how thin the food supply really runs. Cold storage is the buffer underneath it.</cite>
               </blockquote>
             </div>
@@ -197,12 +196,12 @@
 
           <section class="editorial-panel editorial-panel--kelp cave-panel" data-span="cave">
             <div class="panel-top">
-              <p class="eyebrow">Cheese cave</p>
-              <p class="mini-note mini-note--light">Scaled from latest mix</p>
+              <p class="eyebrow eyebrow--light">Biggest in the freezer</p>
+              <p class="mini-note mini-note--light">Top categories by volume</p>
             </div>
             <div class="cave-stack" id="cave-stack"></div>
             <p class="panel-footnote-text">
-              Width reflects relative storage volume — American, Swiss, and butter as the bright outer puck.
+              Each bar is a top-level category; width tracks its share of total US cold storage. Tap any for its full history.
             </p>
           </section>
 
@@ -268,11 +267,28 @@
       <!-- ═══════════════════════════════════════════
            VIEW: THROUGH TIME
       ════════════════════════════════════════════ -->
-      <div class="view-section view-section--hidden" id="view-through-time" role="tabpanel">
+      <!-- ═══════════════════════════════════════════
+           VIEW: THE RHYTHM — seasonal shape, then the full archive
+      ════════════════════════════════════════════ -->
+      <div class="view-section view-section--hidden" id="view-rhythm" role="tabpanel">
+        <div class="seasonality-header">
+          <p class="eyebrow">Average year · 5 seasons of data</p>
+          <h2 class="view-title">The freezer has seasons.</h2>
+          <p class="view-subtitle">Each curve is a commodity's average year — how stocks swell and drain with harvests, holidays, and habit. 100 is the commodity's own average; the highlighted band marks the month being reported.</p>
+          <p class="seasonality-now" id="seasonality-now"></p>
+        </div>
+        <div class="seasonality-grid" id="seasonality-grid"></div>
+
+        <div class="rhythm-divider" id="the-archive">
+          <span class="rhythm-divider-line" aria-hidden="true"></span>
+          <span class="rhythm-divider-label">The full archive</span>
+          <span class="rhythm-divider-line" aria-hidden="true"></span>
+        </div>
+
         <div class="through-time-header">
           <p class="eyebrow">5-year archive · monthly snapshots</p>
           <h2 class="view-title">Every commodity, across time.</h2>
-          <p class="view-subtitle">Each tile shows 60 months of cold storage volumes. Peaks and valleys reveal seasonal rhythms, supply shocks, and the slow drift of American eating habits. Tap any tile for the full story.</p>
+          <p class="view-subtitle">The averages above smooth things out — here is the raw record. Each tile shows 60 months of cold storage volumes: supply shocks, holidays, and the slow drift of American eating habits. Tap any tile for the full story.</p>
         </div>
         <div class="through-time-filter-rail">
           <button class="filter-pill is-active" data-tt-filter="all" type="button" aria-pressed="true">All</button>
@@ -281,19 +297,6 @@
           <button class="filter-pill filter-pill--protein" data-tt-filter="protein" type="button" aria-pressed="false">Meat + poultry</button>
         </div>
         <div class="through-time-grid" id="through-time-grid"></div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════
-           VIEW: SEASONS
-      ════════════════════════════════════════════ -->
-      <div class="view-section view-section--hidden" id="view-seasonality" role="tabpanel">
-        <div class="seasonality-header">
-          <p class="eyebrow">Average year · 5 seasons of data</p>
-          <h2 class="view-title">The freezer has seasons.</h2>
-          <p class="view-subtitle">Each curve is a commodity's average year — how stocks swell and drain with harvests, holidays, and habit. 100 is the commodity's own average; the highlighted band marks the month being reported.</p>
-          <p class="seasonality-now" id="seasonality-now"></p>
-        </div>
-        <div class="seasonality-grid" id="seasonality-grid"></div>
       </div>
 
       <!-- ═══════════════════════════════════════════
@@ -394,6 +397,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=12"></script>
+    <script type="module" src="./app.js?v=13"></script>
   </body>
 </html>
