@@ -288,7 +288,17 @@ a {
   opacity: 0.85;
 }
 
+/* Headline left, pull-quote right — fills the panel's wide green space */
+.why-strip-top {
+  display: flex;
+  gap: var(--ed-space-5);
+  align-items: center;
+  justify-content: space-between;
+}
+.why-strip-top .why-strip-headline { flex: 0 1 auto; }
+
 .why-strip-quote {
+  flex: 0 1 40ch;
   margin: 0;
   padding-left: var(--ed-space-3);
   border-left: 3px solid color-mix(in srgb, var(--ed-paper-2) 55%, transparent);
@@ -297,7 +307,16 @@ a {
   font-style: italic;
   line-height: 1.3;
   letter-spacing: -0.01em;
-  max-width: 34ch;
+  max-width: 40ch;
+}
+.why-strip-quote-emph {
+  font-style: normal;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .why-strip-top { flex-direction: column; align-items: flex-start; gap: var(--ed-space-3); }
+  .why-strip-quote { flex-basis: auto; }
 }
 .why-strip-quote cite {
   display: block;
@@ -433,7 +452,10 @@ a {
 .category-mosaic > .ranking-panel { grid-column: span 7; min-height: 300px; }
 
 @media (max-width: 980px) {
-  .category-mosaic { grid-template-columns: 1fr; }
+  /* minmax(0, …) so a stale-width canvas can never prop the column open
+     (matches the main dashboard grid); otherwise the chart forces the
+     whole band wider than the viewport and the page scrolls sideways. */
+  .category-mosaic { grid-template-columns: minmax(0, 1fr); }
   .category-mosaic > .chart-panel,
   .category-mosaic > .compare-panel,
   .category-mosaic > .ranking-panel { grid-column: 1 / -1; min-height: auto; }
@@ -617,6 +639,7 @@ a {
 .trend-canvas {
   width: 100%;
   height: 100%;
+  max-width: 100%; /* cap even a stale inline width so it can't overflow its cell */
   display: block;
 }
 
