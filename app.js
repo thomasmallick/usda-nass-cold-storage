@@ -1,5 +1,11 @@
 const DATA_URL = "./data/cold-storage-archive.json?v=3";
 const US_POPULATION = 335_000_000;
+// USDA ERS: the average American eats ~1,996 lb of food a year (dairy, meat,
+// grains, produce, sweeteners — everything). ~1 ton/person/yr, ≈ 5.5 lb/day.
+// Used only for the "days of national eating" perspective, framed as an
+// estimate; never mixed into the cold-storage totals themselves.
+const ANNUAL_FOOD_LB_PER_PERSON = 1996;
+const US_DAILY_FOOD_LB = US_POPULATION * (ANNUAL_FOOD_LB_PER_PERSON / 365);
 
 // ---------------------------------------------------------------------------
 // Global UI state — single source of truth for re-renders (resize, toggles)
@@ -941,6 +947,23 @@ function buildNarrativeCopy(data, filter) {
   const cargoShips = Math.round(grandTotalLb / 154_000_000); // ~70k DWT ship ≈ 154M lb
   const lbPerAmerican = Math.round(grandTotalLb / US_POPULATION);
   return `Across these categories the US cold chain holds <strong>${formatCompact.format(grandTotalLb)} lb</strong> of frozen food right now — about <strong>${lbPerAmerican} lb per American</strong>, or the equivalent cargo of roughly ${cargoShips} fully loaded container ships.`;
+}
+
+// ---------------------------------------------------------------------------
+// Render: the "nine missed meals" perspective — the whole frozen reserve
+// measured against how much the country eats in a day. Generated from data
+// so the day-count stays honest as the monthly total moves.
+// ---------------------------------------------------------------------------
+function renderPerspective(data) {
+  const el = document.getElementById("why-perspective");
+  if (!el) return;
+  const grandTotalLb = computeGrandTotal(getLatestSnapshot(data.archive)) * 1000;
+  const dailyBillions = (US_DAILY_FOOD_LB / 1e9).toFixed(1);
+  const days = Math.round(grandTotalLb / US_DAILY_FOOD_LB);
+  el.innerHTML =
+    `Americans eat through roughly <strong>${dailyBillions} billion pounds</strong> of food a day. ` +
+    `Nine missed meals is three days without it — and the nation's entire frozen reserve is only about ` +
+    `<strong>${days} days&rsquo;</strong> worth.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2497,6 +2520,7 @@ async function init() {
   renderHero(data);
   renderEditorialTiles(data);
   renderBiggestItems(data);
+  renderPerspective(data);
   renderMonthInFreezer(data);
   bindFilters(data);
   bindTabRouter(data);
