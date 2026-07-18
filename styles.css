@@ -328,6 +328,18 @@ a {
 }
 .why-strip-perspective strong { font-weight: 700; opacity: 1; }
 
+.why-strip-source {
+  margin: var(--ed-space-2) 0 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  opacity: 0.55;
+}
+.why-strip-source a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @media (max-width: 760px) {
   .why-strip-top { flex-direction: column; align-items: flex-start; gap: var(--ed-space-3); }
   .why-strip-aside { flex-basis: auto; max-width: none; }
@@ -1460,6 +1472,11 @@ a {
 }
 
 .cave-story .attribution { color: var(--ed-paper-2); }
+.cave-story-sources a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 @media (max-width: 900px) {
   .cave-story-beats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
