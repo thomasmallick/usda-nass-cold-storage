@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated": "2026-05-02",
+    "updated": "2026-07-25",
     "source": "USDA NASS Cold Storage report (manual seed) + Quick Stats API",
     "units": "1000 lb",
     "note": "Values in 1000 lb. Dashboard multiplies by 1000 for display. Run scripts/fetch-usda.py --backfill 60 to populate historical snapshots."
@@ -1891,6 +1891,44 @@
         "pork_bellies": 52396,
         "total_pork": 435792,
         "total_frozen_red_meat": 861293
+      }
+    },
+    {
+      "observationDate": "2026-06-30",
+      "commodities": {
+        "butter": 332130,
+        "american_cheese": 822805,
+        "swiss_cheese": 24042,
+        "other_natural_cheese": 586221,
+        "total_natural_cheese": 1433068,
+        "total_chicken": 764796,
+        "total_turkey": 391063,
+        "total_frozen_poultry": 1157505,
+        "total_frozen_fruit": 969847,
+        "total_frozen_vegetables": 1343610,
+        "total_frozen_potatoes": 1265767,
+        "total_beef": 389231,
+        "pork_bellies": 52215,
+        "total_pork": 458221,
+        "total_frozen_red_meat": 865033,
+        "pork_hams": 143035,
+        "pork_ribs": 67174,
+        "pork_loins": 32209,
+        "pork_butts": 19034,
+        "pork_trimmings": 39949,
+        "beef_boneless": 350494,
+        "beef_bone_in": 38737,
+        "strawberries": 243283,
+        "blueberries": 169118,
+        "raspberries": 29567,
+        "cherries_tart": 14443,
+        "sweet_corn_cut": 231586,
+        "sweet_corn_cob": 167579,
+        "beans_green": 46009,
+        "carrots": 71446,
+        "peas_green": 163819,
+        "spinach": 26867,
+        "broccoli": 15912
       }
     }
   ]
