@@ -537,7 +537,7 @@ function buildAggregateSeries(data) {
       },
     },
     protein_total: {
-      label: "Meat + poultry reserve",
+      label: "Meat reserve",
       values: {
         yearAgo: sum(["total_frozen_red_meat", "total_frozen_poultry"], "yearAgo"),
         previousMonth: sum(["total_frozen_red_meat", "total_frozen_poultry"], "previousMonth"),
@@ -2084,7 +2084,7 @@ function openCommodityModal(key) {
   body.innerHTML = `
     <div class="modal-head">
       <div>
-        <p class="eyebrow">${group === "other" ? "Tracked commodity" : group === "protein" ? "Meat + poultry" : group} · ${shortMonthYear(known.date)}</p>
+        <p class="eyebrow">${group === "other" ? "Tracked commodity" : group === "protein" ? "Meat" : group} · ${shortMonthYear(known.date)}</p>
         <h2 class="modal-title">${escapeHtml(label)}</h2>
       </div>
       <button class="modal-close" id="modal-close" aria-label="Close detail view">✕</button>
@@ -2186,9 +2186,13 @@ const VALID_TABS = ["overview", "rhythm", "deep-cuts"];
 // Legacy hashes from the old four-tab layout still resolve to the merged tab.
 const TAB_ALIASES = { "through-time": "rhythm", seasonality: "rhythm" };
 
+// Set by bindStickyFilterRail so the tab router can re-evaluate the pin.
+let syncFilterRailPin = null;
+
 function bindTabRouter(data) {
   const tabs = document.querySelectorAll(".tab-pill[data-tab]");
   const views = document.querySelectorAll(".view-section");
+  const filterRail = document.querySelector(".filter-rail");
   let ttBound = false;
 
   function activate(tabId) {
@@ -2204,6 +2208,8 @@ function bindTabRouter(data) {
       const matches = v.id === `view-${tabId}`;
       v.classList.toggle("view-section--hidden", !matches);
     });
+    filterRail?.classList.toggle("view-section--hidden", tabId !== "overview");
+    syncFilterRailPin?.();
 
     // The Rhythm tab holds both the seasonal shape and the full archive.
     if (tabId === "rhythm") {
@@ -2232,13 +2238,69 @@ function bindTabRouter(data) {
 }
 
 // ---------------------------------------------------------------------------
+// Sticky filter rail. The rail shares the topbar's tagline line, so it can't
+// use position:sticky (it would scroll away with its grid parent). Instead we
+// pin it to the viewport once the header passes, freezing its grid row height
+// so removing it from flow shifts nothing.
+// ---------------------------------------------------------------------------
+const PINNED_CLASS = "filter-rail--pinned";
+
+function bindStickyFilterRail() {
+  const rail = document.querySelector(".filter-rail");
+  const topbar = document.querySelector(".topbar");
+  if (!rail || !topbar) return;
+
+  let rowHeight = 0;
+
+  // Two different boxes: unpinned the rail sits in a grid column (carrying a
+  // top margin), pinned it is full-bleed with its own padding — and may wrap to
+  // a different number of lines. Measure each in its own state.
+  // `--pinned-rail-h` drives scroll-margin-top so jump targets clear the bar.
+  function measure() {
+    const wasPinned = rail.classList.contains(PINNED_CLASS);
+
+    rail.classList.remove(PINNED_CLASS);
+    topbar.style.removeProperty("--rail-row-h");
+    rowHeight = rail.offsetHeight + (parseFloat(getComputedStyle(rail).marginTop) || 0);
+
+    rail.classList.add(PINNED_CLASS);
+    document.documentElement.style.setProperty("--pinned-rail-h", `${rail.offsetHeight}px`);
+
+    rail.classList.toggle(PINNED_CLASS, wasPinned);
+  }
+
+  function update() {
+    // The rail is the topbar's last row, so its top edge sits rowHeight above
+    // the header's bottom. Once that crosses the viewport top, pin.
+    const pin =
+      state.tab === "overview" &&
+      topbar.getBoundingClientRect().bottom - rowHeight <= 0;
+
+    rail.classList.toggle(PINNED_CLASS, pin);
+    if (pin) topbar.style.setProperty("--rail-row-h", `${rowHeight}px`);
+    else topbar.style.removeProperty("--rail-row-h");
+  }
+
+  syncFilterRailPin = update;
+
+  measure();
+  update();
+
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", () => {
+    measure();
+    update();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Overview: continuous scroll — "All storage" mosaic, then one band per
 // subcategory. The filter rail is a jump nav, not an in-place swap.
 // ---------------------------------------------------------------------------
 const OVERVIEW_SECTIONS = [
   { filter: "dairy",   eyebrow: "Dairy" },
   { filter: "produce", eyebrow: "Produce" },
-  { filter: "protein", eyebrow: "Meat + poultry" },
+  { filter: "protein", eyebrow: "Meat" },
 ];
 
 function buildCategorySections() {
@@ -2255,7 +2317,6 @@ function buildCategorySections() {
       <span class="category-teaser-lead" id="teaser-lead-${filter}"></span>
       <span class="category-teaser-foot">
         <span class="delta category-teaser-mom" id="teaser-mom-${filter}"></span>
-        <span class="category-teaser-cta">View breakdown <span class="category-teaser-chev" aria-hidden="true">▾</span></span>
       </span>
     </button>`).join("");
 
@@ -2303,7 +2364,7 @@ function buildCategorySections() {
     <div class="category-teasers-head" id="by-category">
       <p class="eyebrow">By category</p>
       <h2 class="view-title">Three aisles of the frozen mountain.</h2>
-      <p class="view-subtitle">Dairy, produce, and meat + poultry — the headline number for each. Open one for its full trend, storage mix, and ranked breakdown.</p>
+      <p class="view-subtitle">Dairy, produce, and meat — the headline number for each. Open one for its full trend, storage mix, and ranked breakdown.</p>
     </div>
     <div class="category-teasers">${teasers}</div>
     <div class="category-details">${details}</div>`;
@@ -2524,6 +2585,7 @@ async function init() {
   renderMonthInFreezer(data);
   bindFilters(data);
   bindTabRouter(data);
+  bindStickyFilterRail();
   bindUnitToggle(data);
   bindTabJumps();
   bindModal();

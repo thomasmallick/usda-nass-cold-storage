@@ -66,18 +66,58 @@ a {
 }
 
 /* ── Shell ───────────────────────────────────────────────── */
+/* Flex column so the footer can pin to the bottom on short pages.
+   --shell-pad is exposed so the footer can cancel it and run full-bleed. */
 .editorial-dashboard-shell {
+  --shell-pad: var(--ed-space-5);
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  padding: var(--ed-space-5);
+  padding: var(--shell-pad);
 }
 
 /* ── Topbar ──────────────────────────────────────────────── */
+/* Tabs ride top-right beside the eyebrow; filter pills share the tagline's line */
 .topbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--ed-space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "eyebrow tabs"
+    "title   title"
+    "tagline filters";
+  /* JS freezes the filter row's height while the rail is pinned, so nothing shifts */
+  grid-template-rows: auto auto var(--rail-row-h, auto);
+  align-items: center;
+  gap: 0 var(--ed-space-4);
   margin-bottom: var(--ed-space-4);
+}
+
+.topbar > .eyebrow { grid-area: eyebrow; }
+.topbar .page-title { grid-area: title; }
+.topbar .page-tagline { grid-area: tagline; }
+
+.topbar .tab-bar {
+  grid-area: tabs;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.topbar .filter-rail {
+  grid-area: filters;
+  margin-top: 1.86rem;
+}
+
+/* Once the header scrolls past, the rail pins to the top as a jump-nav */
+.topbar .filter-rail--pinned {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin-top: 0;
+  padding: var(--ed-space-2) var(--ed-space-5);
+  background: color-mix(in srgb, var(--ed-paper) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .page-title {
@@ -141,22 +181,13 @@ a {
 }
 
 /* ── Filter rail ─────────────────────────────────────────── */
+/* Lives in the topbar tagline row; JS hides it outside the overview tab */
 .filter-rail {
   display: flex;
   gap: var(--ed-space-2);
   flex-wrap: wrap;
-  margin-bottom: var(--ed-space-4);
-}
-
-/* On the overview the rail is a sticky jump-nav for the scrolling sections */
-#view-overview .filter-rail {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  padding: 0 0 var(--ed-space-2);
-  margin-bottom: var(--ed-space-2);
-  background: color-mix(in srgb, var(--ed-paper) 88%, transparent);
-  backdrop-filter: blur(8px);
+  justify-content: flex-end;
+  margin-bottom: 0;
 }
 
 .filter-pill {
@@ -450,6 +481,12 @@ a {
   .month-cards { grid-template-columns: 1fr; }
 }
 
+/* Filter-rail jump targets must clear the pinned rail (JS measures its height) */
+.editorial-dashboard-grid,
+.category-teaser {
+  scroll-margin-top: calc(var(--pinned-rail-h, 0px) + var(--ed-space-3));
+}
+
 /* ── Overview category teasers (3 columns, click to expand) ── */
 .category-teasers-head {
   margin: var(--ed-space-6) 0 var(--ed-space-3);
@@ -532,18 +569,6 @@ a {
 }
 
 .category-teaser-mom { font-size: 0.82rem; font-weight: 700; }
-
-.category-teaser-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  opacity: 0.7;
-}
-
-.category-teaser-chev { transition: transform 220ms var(--ed-spring); }
-.category-teaser.is-open .category-teaser-chev { transform: rotate(180deg); }
 
 .category-detail {
   margin-top: var(--ed-space-3);
@@ -2234,29 +2259,47 @@ a {
 }
 
 /* ── Site footer ─────────────────────────────────────────── */
+/* Shared footer treatment across projects. Negative margins cancel the shell
+   padding so the rule and cream band run edge to edge. */
 .site-footer {
-  margin-top: var(--ed-space-5);
-  padding: var(--ed-space-5) 0 var(--ed-space-3);
-  border-top: var(--ed-line);
+  margin: auto calc(-1 * var(--shell-pad)) calc(-1 * var(--shell-pad));
   display: flex;
-  justify-content: flex-start;
-}
-
-.site-footer-mark {
-  font-family: "Instrument Serif", var(--ed-font-display);
-  font-size: 1.1rem;
-  letter-spacing: 0.1em;
-  text-transform: lowercase;
-  opacity: 0.42;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px 36px;
+  border-top: 1px solid rgba(26, 24, 19, 0.15);
+  background: #f3eee2;
+  font-size: 12.5px;
+  color: rgba(26, 24, 19, 0.55);
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 980px) {
-  .editorial-dashboard-shell { padding: var(--ed-space-3); }
+  .editorial-dashboard-shell { --shell-pad: var(--ed-space-3); }
 
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "eyebrow"
+      "title"
+      "tagline"
+      "tabs"
+      "filters";
+    grid-template-rows: auto auto auto auto var(--rail-row-h, auto);
+    align-items: start;
+  }
+
+  .topbar .tab-bar,
+  .topbar .filter-rail {
+    justify-content: flex-start;
+    margin-top: var(--ed-space-3);
+  }
+
+  .topbar .filter-rail--pinned {
+    margin-top: 0;
+    padding: var(--ed-space-2) var(--ed-space-3);
   }
 
   /* minmax(0, …) so an oversized canvas can never prop the column open */
@@ -2293,7 +2336,7 @@ a {
 }
 
 @media (max-width: 480px) {
-  .editorial-dashboard-shell { padding: var(--ed-space-2); }
+  .editorial-dashboard-shell { --shell-pad: var(--ed-space-2); }
 
   .tab-bar, .filter-rail, .through-time-filter-rail {
     gap: var(--ed-space-1);
