@@ -1233,6 +1233,16 @@ a {
 }
 
 /* ── View sections ───────────────────────────────────────── */
+/* Breathing room before the footer. It lives here rather than on
+   .site-footer because that element's margin-top:auto is what pins it to
+   the bottom on short pages. Flex siblings don't collapse margins, so this
+   adds to the pin instead of fighting it. Matters most on the overview
+   with every aisle collapsed: .category-details is then zero-height and
+   the teaser cards would otherwise butt straight into the footer rule. */
+.view-section {
+  margin-bottom: var(--ed-space-6);
+}
+
 .view-section--hidden {
   display: none;
 }
