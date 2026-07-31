@@ -18,7 +18,14 @@
     <meta name="twitter:description" content="Billions of pounds of butter, beef, and broccoli — the US frozen reserve, re-cut monthly from USDA NASS cold storage data." />
     <meta name="twitter:image" content="./assets/og-image.png" />
 
-    <link rel="stylesheet" href="./styles.css?v=30" />
+    <link rel="stylesheet" href="./styles.css?v=32" />
+
+    <script>
+      // Set before first paint so scroll-reveal panels never flash in and then
+      // hide. If this script or app.js never runs, the gate is absent and every
+      // panel stays plainly visible.
+      document.documentElement.classList.add("js-reveal");
+    </script>
   </head>
   <body>
     <div class="editorial-dashboard-shell" data-mode="editorial-mosaic">
@@ -80,7 +87,7 @@
             </div>
           </section>
 
-          <section class="editorial-panel editorial-panel--sun stat-panel" data-span="stat-1">
+          <section class="editorial-panel editorial-panel--sun stat-panel" data-span="stat-1" data-reveal="panel">
             <div>
               <p class="eyebrow">Fast mover</p>
               <h2 class="panel-title" id="mover-title">—</h2>
@@ -102,7 +109,7 @@
             <span class="insight-badge" id="insight-mover"></span>
           </section>
 
-          <section class="editorial-panel editorial-panel--coral stat-panel" data-span="stat-2">
+          <section class="editorial-panel editorial-panel--coral stat-panel" data-span="stat-2" data-reveal="panel">
             <div>
               <p class="eyebrow">Volume leader</p>
               <h2 class="panel-title" id="leader-title">—</h2>
@@ -122,7 +129,7 @@
 
           <!-- ROW 2 — Why the freezer exists: the story spine -->
 
-          <section class="editorial-panel editorial-panel--kelp why-strip" data-span="why">
+          <section class="editorial-panel editorial-panel--kelp why-strip" data-span="why" data-reveal="chapter" data-snap>
             <p class="eyebrow eyebrow--light">Why a freezer this big exists</p>
             <div class="why-strip-top">
               <h2 class="why-strip-headline">Harvests are moments. Appetite is constant.</h2>
@@ -161,7 +168,7 @@
 
           <!-- ROW 3 — Narrative slab + Chart strip -->
 
-          <section class="editorial-panel editorial-panel--paper narrative-panel" data-span="narrative">
+          <section class="editorial-panel editorial-panel--paper narrative-panel" data-span="narrative" data-reveal="panel">
             <div>
               <p class="eyebrow">In plain terms</p>
               <h2 class="panel-title">A number that earns its size.</h2>
@@ -179,7 +186,7 @@
             </div>
           </section>
 
-          <section class="editorial-panel editorial-panel--cobalt chart-panel" data-span="chart">
+          <section class="editorial-panel editorial-panel--cobalt chart-panel" data-span="chart" data-reveal="panel">
             <div class="panel-top">
               <div>
                 <p class="eyebrow">5-year trend</p>
@@ -200,7 +207,7 @@
 
           <!-- ROW 3 — Cave art + Comparison + Source -->
 
-          <section class="editorial-panel editorial-panel--kelp cave-panel" data-span="cave">
+          <section class="editorial-panel editorial-panel--kelp cave-panel" data-span="cave" data-reveal="panel">
             <div class="panel-top">
               <p class="eyebrow eyebrow--light">Biggest in the freezer</p>
               <p class="mini-note mini-note--light">Top categories by volume</p>
@@ -211,7 +218,7 @@
             </p>
           </section>
 
-          <section class="editorial-panel editorial-panel--paper compare-panel" data-span="compare">
+          <section class="editorial-panel editorial-panel--paper compare-panel" data-span="compare" data-reveal="panel">
             <div class="panel-top">
               <div>
                 <p class="eyebrow">Year ago · last month · latest</p>
@@ -222,7 +229,7 @@
             <p class="attribution">Bars scale from zero — the % badge carries the story.</p>
           </section>
 
-          <section class="editorial-panel editorial-panel--paper source-panel" data-span="source">
+          <section class="editorial-panel editorial-panel--paper source-panel" data-span="source" data-reveal="panel">
             <div>
               <p class="eyebrow">Source</p>
               <h2 class="panel-title">Official snapshot, wired for credibility.</h2>
@@ -239,7 +246,7 @@
 
           <!-- ROW 5 — This month in the freezer: the script vs. the tape -->
 
-          <section class="editorial-panel editorial-panel--paper month-panel" data-span="month">
+          <section class="editorial-panel editorial-panel--paper month-panel" data-span="month" data-reveal="chapter" data-snap>
             <div class="panel-top">
               <div>
                 <p class="eyebrow">This month in the freezer</p>
@@ -253,7 +260,7 @@
 
           <!-- ROW 6 — Full-width ranking table -->
 
-          <section class="editorial-panel editorial-panel--ink ranking-panel" data-span="table">
+          <section class="editorial-panel editorial-panel--ink ranking-panel" data-span="table" data-reveal="panel">
             <div class="panel-top">
               <div>
                 <p class="eyebrow eyebrow--light">Operations list</p>
@@ -407,6 +414,6 @@
       </div>
     </div>
 
-    <script type="module" src="./app.js?v=19"></script>
+    <script type="module" src="./app.js?v=21"></script>
   </body>
 </html>

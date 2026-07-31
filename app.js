@@ -2294,6 +2294,72 @@ function bindStickyFilterRail() {
 }
 
 // ---------------------------------------------------------------------------
+// Weighted scroll reveal. Panels arrive as they enter the viewport; chapter
+// beats travel further and settle slower than supporting panels, so the page
+// reads as paced instead of uniform. One-shot — nothing re-hides on scroll up.
+// ---------------------------------------------------------------------------
+let revealObserver = null;
+const pendingReveals = new Set();
+
+function revealPanel(el, delay = 0) {
+  if (el.classList.contains("is-inview")) return;
+  el.style.setProperty("--reveal-delay", `${delay}ms`);
+  el.classList.add("is-inview");
+  pendingReveals.delete(el);
+  revealObserver?.unobserve(el);
+}
+
+// A panel can go from below the fold to above it inside a single frame — a
+// fast flick, a filter-pill jump, or a restored scroll position. It never
+// registers as intersecting, so without this sweep it would stay invisible
+// for good. Anything already scrolled past is shown outright (it is
+// off-screen, so there is no animation to miss).
+function sweepPassedReveals() {
+  if (!pendingReveals.size) return;
+  [...pendingReveals].forEach((el) => {
+    if (el.getBoundingClientRect().bottom <= 0) revealPanel(el);
+  });
+}
+
+function initScrollReveal() {
+  // No IntersectionObserver (or reduced motion) — drop the gate and show
+  // everything as plain static content.
+  if (!("IntersectionObserver" in window) ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.documentElement.classList.remove("js-reveal");
+    return;
+  }
+
+  revealObserver = new IntersectionObserver((entries) => {
+    // Entries arrive in document order within a batch; stagger them so a row
+    // entering together cascades rather than popping as one block.
+    let staggerIndex = 0;
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      revealPanel(entry.target, Math.min(staggerIndex++, 3) * 70);
+    });
+  }, {
+    // Start the reveal a little before the panel's top edge clears the fold,
+    // so it is already settling by the time it is properly in view.
+    rootMargin: "0px 0px -12% 0px",
+    threshold: 0.01,
+  });
+
+  observeReveals(document);
+  window.addEventListener("scroll", sweepPassedReveals, { passive: true });
+}
+
+// Register any not-yet-revealed targets under `root` (used again after the
+// category sections are injected).
+function observeReveals(root) {
+  if (!revealObserver) return;
+  root.querySelectorAll("[data-reveal]:not(.is-inview)").forEach((el) => {
+    pendingReveals.add(el);
+    revealObserver.observe(el);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Overview: continuous scroll — "All storage" mosaic, then one band per
 // subcategory. The filter rail is a jump nav, not an in-place swap.
 // ---------------------------------------------------------------------------
@@ -2361,13 +2427,15 @@ function buildCategorySections() {
     </section>`).join("");
 
   host.innerHTML = `
-    <div class="category-teasers-head" id="by-category">
+    <div class="category-teasers-head" id="by-category" data-reveal="chapter">
       <p class="eyebrow">By category</p>
       <h2 class="view-title">Three aisles of the frozen mountain.</h2>
       <p class="view-subtitle">Dairy, produce, and meat — the headline number for each. Open one for its full trend, storage mix, and ranked breakdown.</p>
     </div>
     <div class="category-teasers">${teasers}</div>
     <div class="category-details">${details}</div>`;
+
+  observeReveals(host);
 }
 
 // Plain lb (or per-American) formatter for a category total — no single
@@ -2583,6 +2651,8 @@ async function init() {
   renderBiggestItems(data);
   renderPerspective(data);
   renderMonthInFreezer(data);
+  // Before bindFilters: buildCategorySections registers its own reveal targets.
+  initScrollReveal();
   bindFilters(data);
   bindTabRouter(data);
   bindStickyFilterRail();
@@ -2594,6 +2664,9 @@ async function init() {
 
 init().catch((error) => {
   console.error("Dashboard load failed", error);
+  // Drop the reveal gate: if we failed before the observer started, every
+  // tagged panel would still be at opacity:0 and the page would read blank.
+  document.documentElement.classList.remove("js-reveal");
   const note = document.getElementById("hero-observation-date");
   if (note) note.textContent = "Data failed to load";
   const hero = document.getElementById("hero-value");
